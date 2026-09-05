@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fleasio
 // @namespace    fleasio-asset-replacer
-// @version      3.1
+// @version      1.1
 // @match        https://veck.io/*
 // @run-at       document-start
 // @grant        GM_xmlhttpRequest
@@ -39,6 +39,22 @@
             });
         });
     }
+
+    // --- Stop the game's global touch-blocking (esp. in fullscreen) from
+    //     reaching our UI. Registered on window (outermost) in the capture
+    //     phase so it always runs before listeners the game attaches to
+    //     document/canvas, no matter when it attaches them. ---
+    function isInsideFleasioUI(target) {
+        return !!(target && target.closest && target.closest('#fleasio-btn, #fleasio-panel'));
+    }
+
+    ['touchstart', 'touchmove', 'touchend'].forEach(evt => {
+        window.addEventListener(evt, (e) => {
+            if (isInsideFleasioUI(e.target)) {
+                e.stopImmediatePropagation();
+            }
+        }, { capture: true, passive: true });
+    });
 
     // --- Patch fetch ---
     const realFetch = unsafeWindow.fetch.bind(unsafeWindow);
@@ -130,6 +146,7 @@
         document.head.appendChild(style);
 
         const btn = document.createElement("div");
+        btn.id = "fleasio-btn";
         btn.textContent = "F";
         Object.assign(btn.style, {
             position: "fixed", top: "10px", right: "10px", zIndex: 2147483647,
@@ -151,6 +168,7 @@
         );
 
         const panel = document.createElement("div");
+        panel.id = "fleasio-panel";
         Object.assign(panel.style, {
             position: "fixed", zIndex: 2147483647,
             width: "300px", maxHeight: "65vh", overflowY: "auto",
@@ -164,11 +182,6 @@
             touchAction: "pan-y", overscrollBehavior: "contain",
             WebkitOverflowScrolling: "touch",
         });
-
-        // Keep panel touch-scroll gestures from leaking to the game canvas underneath.
-        ["touchstart", "touchmove", "touchend"].forEach(evt =>
-            panel.addEventListener(evt, (e) => e.stopPropagation(), { passive: true })
-        );
 
         panel.innerHTML = `
             <div style="display:flex;justify-content:space-between;align-items:center;
@@ -284,7 +297,6 @@
             panel.querySelector("#fl-match").value = "";
             panel.querySelector("#fl-replacement").value = "";
             renderList();
-            // fade in the newly added row
             const list = panel.querySelector("#fl-list");
             const last = list.lastElementChild;
             if (last) last.style.animation = "fleasio-row-in 0.2s ease";

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fleasio
 // @namespace    fleasio-asset-replacer
-// @version      3.0
+// @version      3.1
 // @match        https://veck.io/*
 // @run-at       document-start
 // @grant        GM_xmlhttpRequest
@@ -17,6 +17,7 @@
     let replacements = GM_getValue(STORAGE_KEY, []); // [{match, replacement}, ...]
     let moveMode = false;
     let uiHidden = false;
+    let panelOpen = false;
 
     function save() {
         GM_setValue(STORAGE_KEY, replacements);
@@ -110,6 +111,24 @@
 
     // --- UI ---
     function buildUI() {
+        const style = document.createElement("style");
+        style.textContent = `
+            @keyframes fleasio-pop {
+                0% { transform: scale(0); opacity: 0; }
+                60% { transform: scale(1.15); opacity: 1; }
+                100% { transform: scale(1); opacity: 1; }
+            }
+            @keyframes fleasio-row-in {
+                from { opacity: 0; transform: translateY(-6px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            .fleasio-row-exit {
+                opacity: 0 !important;
+                transform: translateX(20px) !important;
+            }
+        `;
+        document.head.appendChild(style);
+
         const btn = document.createElement("div");
         btn.textContent = "F";
         Object.assign(btn.style, {
@@ -121,7 +140,15 @@
             userSelect: "none", touchAction: "none",
             boxShadow: "0 3px 10px rgba(0,0,0,0.45)",
             transition: "transform 0.15s, box-shadow 0.15s",
+            animation: "fleasio-pop 0.35s ease",
         });
+
+        btn.addEventListener("pointerdown", () => {
+            btn.style.transform = "scale(0.88)";
+        });
+        ["pointerup", "pointercancel", "pointerleave"].forEach(evt =>
+            btn.addEventListener(evt, () => { btn.style.transform = "scale(1)"; })
+        );
 
         const panel = document.createElement("div");
         Object.assign(panel.style, {
@@ -129,9 +156,19 @@
             width: "300px", maxHeight: "65vh", overflowY: "auto",
             background: "rgba(18,18,20,0.97)", color: "#eee",
             borderRadius: "12px", fontFamily: "sans-serif", fontSize: "13px",
-            display: "none", boxShadow: "0 8px 24px rgba(0,0,0,0.55)",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.55)",
             border: "1px solid rgba(255,255,255,0.08)",
+            opacity: "0", transform: "scale(0.92) translateY(-10px)",
+            transformOrigin: "top right", pointerEvents: "none",
+            transition: "opacity 0.18s ease, transform 0.18s ease",
+            touchAction: "pan-y", overscrollBehavior: "contain",
+            WebkitOverflowScrolling: "touch",
         });
+
+        // Keep panel touch-scroll gestures from leaking to the game canvas underneath.
+        ["touchstart", "touchmove", "touchend"].forEach(evt =>
+            panel.addEventListener(evt, (e) => e.stopPropagation(), { passive: true })
+        );
 
         panel.innerHTML = `
             <div style="display:flex;justify-content:space-between;align-items:center;
@@ -151,7 +188,8 @@
                     style="width:100%;margin-bottom:8px;padding:8px;box-sizing:border-box;
                            background:#222;border:1px solid #333;border-radius:6px;color:#eee;">
                 <button id="fl-add" style="width:100%;padding:8px;margin-bottom:14px;cursor:pointer;
-                           background:#6366f1;border:none;border-radius:6px;color:#fff;font-weight:bold;">
+                           background:#6366f1;border:none;border-radius:6px;color:#fff;font-weight:bold;
+                           transition:transform 0.1s, background 0.15s;">
                     + Add
                 </button>
                 <div id="fl-list"></div>
@@ -164,6 +202,12 @@
         document.documentElement.appendChild(btn);
         document.documentElement.appendChild(panel);
 
+        const addBtn = panel.querySelector("#fl-add");
+        addBtn.addEventListener("pointerdown", () => { addBtn.style.transform = "scale(0.96)"; });
+        ["pointerup", "pointercancel", "pointerleave"].forEach(evt =>
+            addBtn.addEventListener(evt, () => { addBtn.style.transform = "scale(1)"; })
+        );
+
         function positionPanel() {
             const r = btn.getBoundingClientRect();
             let left = r.right - 300;
@@ -174,16 +218,24 @@
             panel.style.top = top + "px";
         }
 
-        function togglePanel() {
-            const opening = panel.style.display === "none";
-            if (opening) positionPanel();
-            panel.style.display = opening ? "block" : "none";
-            if (opening) renderList();
+        function setPanelOpen(open) {
+            panelOpen = open;
+            if (open) {
+                positionPanel();
+                panel.style.pointerEvents = "auto";
+                requestAnimationFrame(() => {
+                    panel.style.opacity = "1";
+                    panel.style.transform = "scale(1) translateY(0)";
+                });
+                renderList();
+            } else {
+                panel.style.opacity = "0";
+                panel.style.transform = "scale(0.92) translateY(-10px)";
+                panel.style.pointerEvents = "none";
+            }
         }
 
-        panel.querySelector("#fl-close").addEventListener("click", () => {
-            panel.style.display = "none";
-        });
+        panel.querySelector("#fl-close").addEventListener("click", () => setPanelOpen(false));
 
         function renderList() {
             const list = panel.querySelector("#fl-list");
@@ -193,6 +245,7 @@
                 empty.textContent = "No replacements yet.";
                 empty.style.opacity = "0.4";
                 list.appendChild(empty);
+                return;
             }
             replacements.forEach((r, i) => {
                 const row = document.createElement("div");
@@ -200,6 +253,7 @@
                     display: "flex", justifyContent: "space-between", alignItems: "center",
                     marginBottom: "6px", background: "rgba(255,255,255,0.05)",
                     padding: "8px", borderRadius: "6px",
+                    transition: "opacity 0.15s ease, transform 0.15s ease",
                 });
                 row.innerHTML = `<span style="flex:1;margin-right:6px;overflow:hidden;
                     text-overflow:ellipsis;white-space:nowrap;" title="${r.match}">${r.match}</span>`;
@@ -209,9 +263,12 @@
                     cursor: "pointer", background: "none", border: "none", color: "#f66", fontSize: "14px",
                 });
                 del.addEventListener("click", () => {
-                    replacements.splice(i, 1);
-                    save();
-                    renderList();
+                    row.classList.add("fleasio-row-exit");
+                    setTimeout(() => {
+                        replacements.splice(i, 1);
+                        save();
+                        renderList();
+                    }, 150);
                 });
                 row.appendChild(del);
                 list.appendChild(row);
@@ -227,6 +284,10 @@
             panel.querySelector("#fl-match").value = "";
             panel.querySelector("#fl-replacement").value = "";
             renderList();
+            // fade in the newly added row
+            const list = panel.querySelector("#fl-list");
+            const last = list.lastElementChild;
+            if (last) last.style.animation = "fleasio-row-in 0.2s ease";
         });
 
         // --- Toggle switch helper ---
@@ -307,12 +368,12 @@
                 btn.style.left = (startPos.x + dx) + "px";
                 btn.style.top = (startPos.y + dy) + "px";
                 btn.style.right = "auto";
-                if (panel.style.display === "block") positionPanel();
+                if (panelOpen) positionPanel();
             }
         });
 
         btn.addEventListener("pointerup", () => {
-            if (!dragging) togglePanel();
+            if (!dragging) setPanelOpen(!panelOpen);
             dragging = false;
         });
     }

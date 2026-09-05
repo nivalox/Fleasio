@@ -456,4 +456,81 @@
             const knob = document.createElement("div");
             Object.assign(knob.style, {
                 width: "18px", height: "18px", borderRadius: "50%", background: "#fff",
-                position: "absolute", top: "3p
+                position: "absolute", top: "3px", left: initial ? "21px" : "3px",
+                transition: "left 0.2s",
+            });
+
+            track.appendChild(knob);
+            let state = initial;
+            track.addEventListener("click", () => {
+                state = !state;
+                track.style.background = state ? "#6366f1" : "#444";
+                knob.style.left = state ? "21px" : "3px";
+                onChange(state);
+            });
+
+            row.appendChild(text);
+            row.appendChild(track);
+            return row;
+        }
+
+        const settings = panel.querySelector("#fl-settings");
+
+        settings.appendChild(createToggle("Move UI", moveMode, (state) => {
+            moveMode = state;
+            btn.style.boxShadow = state
+                ? "0 0 0 3px #6366f1, 0 3px 10px rgba(0,0,0,0.45)"
+                : "0 3px 10px rgba(0,0,0,0.45)";
+        }));
+
+        settings.appendChild(createToggle("Block Google Ads", adBlockEnabled, (state) => {
+            adBlockEnabled = state;
+            GM_setValue("veck_adblock", state);
+        }));
+
+        settings.appendChild(createToggle("Hide UI (until refresh)", false, (state) => {
+            if (state) {
+                uiHidden = true;
+                btn.style.display = "none";
+                panel.style.display = "none";
+            }
+        }));
+
+        // --- Drag-to-move logic ---
+        let dragging = false, dragStart = { x: 0, y: 0 }, startPos = { x: 0, y: 0 };
+
+        btn.addEventListener("pointerdown", (e) => {
+            if (uiHidden) return;
+            dragStart = { x: e.clientX, y: e.clientY };
+            const r = btn.getBoundingClientRect();
+            startPos = { x: r.left, y: r.top };
+            dragging = false;
+            btn.setPointerCapture(e.pointerId);
+        });
+
+        btn.addEventListener("pointermove", (e) => {
+            if (!moveMode || uiHidden) return;
+            if (e.buttons === 0 && e.pointerType !== "touch") return;
+            const dx = e.clientX - dragStart.x;
+            const dy = e.clientY - dragStart.y;
+            if (!dragging && Math.hypot(dx, dy) > 6) dragging = true;
+            if (dragging) {
+                btn.style.left = (startPos.x + dx) + "px";
+                btn.style.top = (startPos.y + dy) + "px";
+                btn.style.right = "auto";
+                if (panelOpen) positionPanel();
+            }
+        });
+
+        btn.addEventListener("pointerup", () => {
+            if (!dragging) setPanelOpen(!panelOpen);
+            dragging = false;
+        });
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", buildUI);
+    } else {
+        buildUI();
+    }
+})();

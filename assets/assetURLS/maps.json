@@ -1,0 +1,63 @@
+{
+  "Side Maps": {
+    "Training Map": {
+      "URL": "https://files.veck.io/static/0_0_2464/remote_scenes_8_d17a220fb16abd61b9e701d00d2c5e2b.bundle"
+    }
+  },
+  "Main Maps": {
+    "Arena": {
+      "URL": "https://files.veck.io/static/0_0_2464/remote_scenes_5_f2896fac46a980572bacd5e2295f0559.bundle"
+    },
+    "Circle Arena": {
+      "URL": "https://files.veck.io/static/0_0_2464/remote_scenes_6_c70b9e874ce51896262cba3de2569707.bundle"
+    },
+    "Block Arena": {
+      "URL": "https://files.veck.io/static/0_0_2464/remote_scenes_7_1c03376859c7ac4332881351fe10ee0d.bundle"
+    },
+    "Blue Print": {
+      "URL": "https://files.veck.io/static/0_0_2464/remote_scenes_36_f34a8c6e04fa742e27b539ff896d5c83.bundle"
+    },
+    "Grave Yard": {
+      "URL": "https://files.veck.io/static/0_0_2464/remote_scenes_9_7e83151267902648a46e921b5a0919e7.bundle"
+    },
+    "Battlefield": {
+      "URL": "https://files.veck.io/static/0_0_2464/remote_scenes_34_78069d3c24172a59810bfdc9e5e1dcb8.bundle"
+    },
+    "Void Arena": {
+      "URL": "https://files.veck.io/static/0_0_2464/remote_scenes_20_8b35d8cc4da86046a136530cdf013816.bundle"
+    },
+    "Blocky Towers": {
+      "URL": "https://files.veck.io/static/0_0_2464/remote_scenes_32_6b85a5a3afc62f8716f3e914d6952830.bundle"
+    },
+    "Playground": {
+      "URL": "https://files.veck.io/static/0_0_2464/remote_scenes_14_53e092a4b7658a19d8e8e6ba1733679d.bundle"
+    },
+    "Station": {
+      "URL": "https://files.veck.io/static/0_0_2464/remote_scenes_25_d43b0ce4c189fbadf96810a48e7dfcd3.bundle"
+    },
+    "Vertigo": {
+      "URL": "https://files.veck.io/static/0_0_2464/remote_scenes_27_9381b11bdc818c43c9b936e70e83e70f.bundle"
+    },
+    "Aircraft": {
+      "URL": "https://files.veck.io/static/0_0_2464/remote_scenes_31_3378c7a09c6170de9285c92510d5cc00.bundle"
+    },
+    "Bridge": {
+      "URL": "https://files.veck.io/static/0_0_2464/remote_scenes_24_a84290676de04623a80c65fcc8cfc9e2.bundle"
+    },
+    "Beach Town": {
+      "URL": "https://files.veck.io/static/0_0_2464/remote_scenes_29_08358897d2c1ff511392759163953d5e.bundle"
+    },
+    "Tuscan": {
+      "URL": "https://files.veck.io/static/0_0_2464/remote_scenes_30_a2ddb77853cad2ad8b097096f1cf38a5.bundle"
+    },
+    "Realistic Arena": {
+      "URL": "https://files.veck.io/static/0_0_2464/remote_scenes_3_472f40a8b0c2144f98f38bf6a3b84686.bundle"
+    },
+    "Sand Duel": {
+      "URL": "https://files.veck.io/static/0_0_2464/remote_scenes_33_2228521cb2b10275c9c628cb1585d8bf.bundle"
+    },
+    "Backrooms": {
+      "URL": "https://files.veck.io/static/0_0_2464/remote_scenes_11_a2939932e2f85bf1e02837c2ad53502e.bundle"
+    }
+  }
+}

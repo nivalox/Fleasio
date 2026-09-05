@@ -1,5 +1,0 @@
-Training Map:
-https://files.veck.io/static/0_0_2464/remote_scenes_8_d17a220fb16abd61b9e701d00d2c5e2b.bundle
-
-Arena Map:
-https://files.veck.io/static/0_0_2464/remote_scenes_5_f2896fac46a980572bacd5e2295f0559.bundle

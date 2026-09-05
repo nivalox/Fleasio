@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fleasio
 // @namespace    fleasio-asset-replacer
-// @version      1.1
+// @version      1.2
 // @match        https://veck.io/*
 // @run-at       document-start
 // @grant        GM_xmlhttpRequest
@@ -14,10 +14,15 @@
     'use strict';
 
     const STORAGE_KEY = "veck_replacements";
+    const MAPS_JSON_URL = "https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/assets/assetURLS/maps.json";
+    const AD_BLOCK_DOMAINS = ["doubleclick.net", "googlesyndication.com", "googleadservices.com", "adservice.google.com"];
+
     let replacements = GM_getValue(STORAGE_KEY, []); // [{match, replacement}, ...]
+    let adBlockEnabled = GM_getValue("veck_adblock", false);
     let moveMode = false;
     let uiHidden = false;
     let panelOpen = false;
+    let mapsDataPromise = null;
 
     function save() {
         GM_setValue(STORAGE_KEY, replacements);
@@ -26,6 +31,11 @@
     function findReplacement(url) {
         const entry = replacements.find(r => url.includes(r.match));
         return entry ? entry.replacement : null;
+    }
+
+    function isAdRequest(url) {
+        if (!adBlockEnabled) return false;
+        return AD_BLOCK_DOMAINS.some(domain => url.includes(domain));
     }
 
     function fetchLocal(localUrl) {
@@ -38,6 +48,41 @@
                 onerror: reject,
             });
         });
+    }
+
+    // --- Maps.json fetch + cache ---
+    function getMapsData() {
+        if (!mapsDataPromise) {
+            mapsDataPromise = new Promise((resolve, reject) => {
+                GM_xmlhttpRequest({
+                    method: "GET",
+                    url: MAPS_JSON_URL,
+                    onload: (res) => {
+                        try {
+                            resolve(JSON.parse(res.responseText));
+                        } catch (e) {
+                            mapsDataPromise = null; // allow retry on parse failure
+                            reject(e);
+                        }
+                    },
+                    onerror: (e) => {
+                        mapsDataPromise = null; // allow retry on network failure
+                        reject(e);
+                    },
+                });
+            });
+        }
+        return mapsDataPromise;
+    }
+
+    function flattenMapsData(data) {
+        const flat = [];
+        for (const category in data) {
+            for (const name in data[category]) {
+                flat.push({ category, name, url: data[category][name].URL });
+            }
+        }
+        return flat;
     }
 
     // --- Stop the game's global touch-blocking (esp. in fullscreen) from
@@ -61,6 +106,12 @@
     unsafeWindow.fetch = async function (input, init) {
         const url = typeof input === "string" ? input : input.url;
         const method = (init && init.method) || (typeof input === "object" && input.method) || "GET";
+
+        if (isAdRequest(url)) {
+            console.log(`[Fleasio] Blocked ad request: ${url}`);
+            return new Response(null, { status: 204, statusText: "No Content" });
+        }
+
         const localUrl = findReplacement(url);
 
         if (localUrl) {
@@ -92,6 +143,20 @@
     };
 
     RealXHR.prototype.send = function (...args) {
+        if (this._interceptUrl && isAdRequest(this._interceptUrl)) {
+            console.log(`[Fleasio] Blocked ad request (XHR): ${this._interceptUrl}`);
+            const xhr = this;
+            setTimeout(() => {
+                Object.defineProperty(xhr, "readyState", { value: 4, configurable: true });
+                Object.defineProperty(xhr, "status", { value: 204, configurable: true });
+                Object.defineProperty(xhr, "response", { value: null, configurable: true });
+                xhr.dispatchEvent(new Event("readystatechange"));
+                xhr.dispatchEvent(new Event("load"));
+                xhr.dispatchEvent(new Event("loadend"));
+            }, 0);
+            return;
+        }
+
         const localUrl = this._interceptUrl && findReplacement(this._interceptUrl);
         if (!localUrl) return realSend.apply(this, args);
 
@@ -194,10 +259,11 @@
             </div>
             <div style="padding:14px;">
                 <div style="font-weight:bold;margin-bottom:8px;opacity:0.8;">Replacements</div>
-                <input id="fl-match" placeholder="Filename to replace"
+                <div style="opacity:0.45;font-size:11px;margin-bottom:6px;">Type "map:" + a name in either field for autocomplete</div>
+                <input id="fl-match" placeholder="Filename to replace (or map:...)"
                     style="width:100%;margin-bottom:6px;padding:8px;box-sizing:border-box;
                            background:#222;border:1px solid #333;border-radius:6px;color:#eee;">
-                <input id="fl-replacement" placeholder="Replacement link"
+                <input id="fl-replacement" placeholder="Replacement link (or map:...)"
                     style="width:100%;margin-bottom:8px;padding:8px;box-sizing:border-box;
                            background:#222;border:1px solid #333;border-radius:6px;color:#eee;">
                 <button id="fl-add" style="width:100%;padding:8px;margin-bottom:14px;cursor:pointer;
@@ -214,6 +280,73 @@
 
         document.documentElement.appendChild(btn);
         document.documentElement.appendChild(panel);
+
+        // --- Autocomplete ---
+        function attachAutocomplete(input, mode) {
+            const wrapper = document.createElement("div");
+            wrapper.style.position = "relative";
+            input.parentNode.insertBefore(wrapper, input);
+            wrapper.appendChild(input);
+
+            const dropdown = document.createElement("div");
+            dropdown.className = "fleasio-autocomplete";
+            Object.assign(dropdown.style, {
+                position: "absolute", left: "0", right: "0", top: "100%",
+                zIndex: 2147483647, background: "#1c1c1e", border: "1px solid #333",
+                borderRadius: "8px", marginTop: "4px", maxHeight: "160px",
+                overflowY: "auto", display: "none",
+                boxShadow: "0 4px 14px rgba(0,0,0,0.5)",
+                touchAction: "pan-y", overscrollBehavior: "contain",
+                WebkitOverflowScrolling: "touch",
+            });
+            wrapper.appendChild(dropdown);
+
+            function hide() {
+                dropdown.style.display = "none";
+                dropdown.innerHTML = "";
+            }
+
+            function renderResults(matches) {
+                dropdown.innerHTML = "";
+                if (matches.length === 0) { hide(); return; }
+                matches.slice(0, 8).forEach(m => {
+                    const item = document.createElement("div");
+                    Object.assign(item.style, {
+                        padding: "8px 10px", cursor: "pointer",
+                        borderBottom: "1px solid rgba(255,255,255,0.05)",
+                    });
+                    item.innerHTML = `<div style="font-size:13px;">${m.name}</div>
+                        <div style="font-size:10px;opacity:0.5;">${m.category}</div>`;
+                    item.addEventListener("pointerdown", (e) => e.preventDefault()); // keep input focused
+                    item.addEventListener("click", () => {
+                        input.value = mode === "match" ? m.url.split("/").pop() : m.url;
+                        hide();
+                    });
+                    dropdown.appendChild(item);
+                });
+                dropdown.style.display = "block";
+            }
+
+            input.addEventListener("input", async () => {
+                const val = input.value;
+                const idx = val.toLowerCase().indexOf("map:");
+                if (idx === -1) { hide(); return; }
+                const term = val.slice(idx + 4).trim().toLowerCase();
+                if (!term) { hide(); return; }
+                try {
+                    const flat = flattenMapsData(await getMapsData());
+                    renderResults(flat.filter(m => m.name.toLowerCase().includes(term)));
+                } catch (e) {
+                    console.error("[Fleasio] Failed to load maps.json", e);
+                    hide();
+                }
+            });
+
+            input.addEventListener("blur", () => setTimeout(hide, 150));
+        }
+
+        attachAutocomplete(panel.querySelector("#fl-match"), "match");
+        attachAutocomplete(panel.querySelector("#fl-replacement"), "url");
 
         const addBtn = panel.querySelector("#fl-add");
         addBtn.addEventListener("pointerdown", () => { addBtn.style.transform = "scale(0.96)"; });
@@ -323,76 +456,4 @@
             const knob = document.createElement("div");
             Object.assign(knob.style, {
                 width: "18px", height: "18px", borderRadius: "50%", background: "#fff",
-                position: "absolute", top: "3px", left: initial ? "21px" : "3px",
-                transition: "left 0.2s",
-            });
-
-            track.appendChild(knob);
-            let state = initial;
-            track.addEventListener("click", () => {
-                state = !state;
-                track.style.background = state ? "#6366f1" : "#444";
-                knob.style.left = state ? "21px" : "3px";
-                onChange(state);
-            });
-
-            row.appendChild(text);
-            row.appendChild(track);
-            return row;
-        }
-
-        const settings = panel.querySelector("#fl-settings");
-
-        settings.appendChild(createToggle("Move UI", moveMode, (state) => {
-            moveMode = state;
-            btn.style.boxShadow = state
-                ? "0 0 0 3px #6366f1, 0 3px 10px rgba(0,0,0,0.45)"
-                : "0 3px 10px rgba(0,0,0,0.45)";
-        }));
-
-        settings.appendChild(createToggle("Hide UI (until refresh)", false, (state) => {
-            if (state) {
-                uiHidden = true;
-                btn.style.display = "none";
-                panel.style.display = "none";
-            }
-        }));
-
-        // --- Drag-to-move logic ---
-        let dragging = false, dragStart = { x: 0, y: 0 }, startPos = { x: 0, y: 0 };
-
-        btn.addEventListener("pointerdown", (e) => {
-            if (uiHidden) return;
-            dragStart = { x: e.clientX, y: e.clientY };
-            const r = btn.getBoundingClientRect();
-            startPos = { x: r.left, y: r.top };
-            dragging = false;
-            btn.setPointerCapture(e.pointerId);
-        });
-
-        btn.addEventListener("pointermove", (e) => {
-            if (!moveMode || uiHidden) return;
-            if (e.buttons === 0 && e.pointerType !== "touch") return;
-            const dx = e.clientX - dragStart.x;
-            const dy = e.clientY - dragStart.y;
-            if (!dragging && Math.hypot(dx, dy) > 6) dragging = true;
-            if (dragging) {
-                btn.style.left = (startPos.x + dx) + "px";
-                btn.style.top = (startPos.y + dy) + "px";
-                btn.style.right = "auto";
-                if (panelOpen) positionPanel();
-            }
-        });
-
-        btn.addEventListener("pointerup", () => {
-            if (!dragging) setPanelOpen(!panelOpen);
-            dragging = false;
-        });
-    }
-
-    if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", buildUI);
-    } else {
-        buildUI();
-    }
-})();
+                position: "absolute", top: "3p

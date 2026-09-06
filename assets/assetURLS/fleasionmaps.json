@@ -1,4 +1,9 @@
 {
+  "Non-Game Maps": {
+    "Fleasio Map Selector": {
+      "URL": "https://github.com/nivalox/Fleasio/raw/refs/heads/main/assets/maps/mapselector.bundle"
+    }
+  },
   "Side Maps": {
     "Nivalos Training": {
       "URL": "https://github.com/nivalox/Fleasio/raw/refs/heads/main/assets/maps/training.bundle"

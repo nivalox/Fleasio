@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fleasio
 // @namespace    fleasio-asset-replacer
-// @version      1.3.5
+// @version      1.4
 // @match        https://veck.io/*
 // @run-at       document-start
 // @grant        GM_xmlhttpRequest
@@ -54,7 +54,11 @@
         });
     }
 
-        function isInsideFleasioUI(target) {
+    // --- Stop the game's global input-blocking (touch AND keyboard) from
+    //     reaching our UI. Registered on window (outermost) in the capture
+    //     phase so it always runs before listeners the game attaches to
+    //     document/canvas, no matter when it attaches them. ---
+    function isInsideFleasioUI(target) {
         return !!(target && target.closest && target.closest('#fleasio-btn, #fleasio-panel'));
     }
 
@@ -73,7 +77,6 @@
             }
         }, { capture: true });
     });
-
 
     const realFetch = unsafeWindow.fetch.bind(unsafeWindow);
     unsafeWindow.fetch = async function (input, init) {

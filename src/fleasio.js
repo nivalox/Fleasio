@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fleasio
 // @namespace    fleasio-asset-replacer
-// @version      1.3
+// @version      1.3.5
 // @match        https://veck.io/*
 // @run-at       document-start
 // @grant        GM_xmlhttpRequest
@@ -54,7 +54,7 @@
         });
     }
 
-    function isInsideFleasioUI(target) {
+        function isInsideFleasioUI(target) {
         return !!(target && target.closest && target.closest('#fleasio-btn, #fleasio-panel'));
     }
 
@@ -65,6 +65,15 @@
             }
         }, { capture: true, passive: true });
     });
+
+    ['keydown', 'keypress', 'keyup'].forEach(evt => {
+        window.addEventListener(evt, (e) => {
+            if (isInsideFleasioUI(e.target)) {
+                e.stopImmediatePropagation();
+            }
+        }, { capture: true });
+    });
+
 
     const realFetch = unsafeWindow.fetch.bind(unsafeWindow);
     unsafeWindow.fetch = async function (input, init) {

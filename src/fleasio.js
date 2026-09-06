@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fleasio
 // @namespace    fleasio-asset-replacer
-// @version      1.4
+// @version      1.5
 // @match        https://veck.io/*
 // @run-at       document-start
 // @grant        GM_xmlhttpRequest
@@ -18,7 +18,7 @@
     const ADBLOCK_KEY = "veck_adblock";
     const MAPS_JSON_URL = "https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/assets/assetURLS/maps.json";
     const FLEASIO_MAPS_JSON_URL = "https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/assets/assetURLS/fleasionmaps.json";
-    const AD_BLOCK_DOMAINS = ["doubleclick.net", "googlesyndication.com", "googleadservices.com", "adservice.google.com"];
+    const AD_BANNER_SELECTOR = '.banner-container[id^="banner_"]';
 
     const state = {
         replacements: GM_getValue(STORAGE_KEY, []),
@@ -37,11 +37,6 @@
         return entry ? entry.replacement : null;
     }
 
-    function isAdRequest(url) {
-        if (!state.adBlockEnabled) return false;
-        return AD_BLOCK_DOMAINS.some(domain => url.includes(domain));
-    }
-
     function fetchLocal(localUrl) {
         return new Promise((resolve, reject) => {
             GM_xmlhttpRequest({
@@ -53,6 +48,25 @@
             });
         });
     }
+
+    // --- Ad banner removal (DOM-based) ---
+    // Ad networks route through many different domains, so blocking network
+    // requests is fragile. Removing the container that holds the banner
+    // works regardless of who's serving it. A MutationObserver (rather than
+    // a one-time sweep) catches it whenever it's (re)inserted — on load,
+    // after a refresh, or if the ad script tries to re-add it later without
+    // a refresh at all.
+    function removeAdBanners() {
+        if (!state.adBlockEnabled) return;
+        document.querySelectorAll(AD_BANNER_SELECTOR).forEach(el => {
+            console.log(`[Fleasio] Removed ad banner: #${el.id}`);
+            el.remove();
+        });
+    }
+
+    removeAdBanners();
+    new MutationObserver(() => removeAdBanners())
+        .observe(document.documentElement, { childList: true, subtree: true });
 
     // --- Stop the game's global input-blocking (touch AND keyboard) from
     //     reaching our UI. Registered on window (outermost) in the capture
@@ -82,11 +96,6 @@
     unsafeWindow.fetch = async function (input, init) {
         const url = typeof input === "string" ? input : input.url;
         const method = (init && init.method) || (typeof input === "object" && input.method) || "GET";
-
-        if (isAdRequest(url)) {
-            console.log(`[Fleasio] Blocked ad request: ${url}`);
-            return new Response(null, { status: 204, statusText: "No Content" });
-        }
 
         const localUrl = findReplacement(url);
 
@@ -118,20 +127,6 @@
     };
 
     RealXHR.prototype.send = function (...args) {
-        if (this._interceptUrl && isAdRequest(this._interceptUrl)) {
-            console.log(`[Fleasio] Blocked ad request (XHR): ${this._interceptUrl}`);
-            const xhr = this;
-            setTimeout(() => {
-                Object.defineProperty(xhr, "readyState", { value: 4, configurable: true });
-                Object.defineProperty(xhr, "status", { value: 204, configurable: true });
-                Object.defineProperty(xhr, "response", { value: null, configurable: true });
-                xhr.dispatchEvent(new Event("readystatechange"));
-                xhr.dispatchEvent(new Event("load"));
-                xhr.dispatchEvent(new Event("loadend"));
-            }, 0);
-            return;
-        }
-
         const localUrl = this._interceptUrl && findReplacement(this._interceptUrl);
         if (!localUrl) return realSend.apply(this, args);
 

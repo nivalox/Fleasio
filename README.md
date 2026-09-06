@@ -11,7 +11,7 @@
 
 ## How to get Fleasio
 
-### Step 1, install Tamper Monkey in your chrome extension store.
+### Step 1, install [Tamper Monkey](https://chromewebstore.google.com/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo) in your chrome extension store.
 
 ### Step 2, navigate to the utilities page in Tamper Monkey.
 

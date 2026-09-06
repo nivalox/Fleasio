@@ -1,4 +1,12 @@
 {
+  "Non-Game Maps": {
+    "Match Making": {
+      "URL": "https://veck.io/StreamingAssets/aa0.0.2464/WebGL/local_assets_matchmakepanel_b63ad18faec1cf986ff3db9ce6712930.bundle"
+    },
+    "Map Selector": {
+      "URL": "https://files.veck.io/static/0_0_2464/remote_scenes_-1_16fe09f02eb58fd3bf3833397b8dc056.bundle"
+    }
+  },
   "Side Maps": {
     "Training Map": {
       "URL": "https://files.veck.io/static/0_0_2464/remote_scenes_8_d17a220fb16abd61b9e701d00d2c5e2b.bundle"

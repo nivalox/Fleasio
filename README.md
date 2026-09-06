@@ -17,6 +17,8 @@
 
 ### Step 3, go to import from URL, and paste this in:
 
-``https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/fleasio.js``
+```
+https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/fleasio.js
+```
 
 ### Step 4, press import, and you are ready!

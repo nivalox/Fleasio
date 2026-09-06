@@ -8,6 +8,7 @@ function buildFleasioUI(state, config, save) {
 
     let mapsDataPromise = null;
     let fleasioMapsDataPromise = null;
+    let panelFullscreen = false;
 
     function getMapsData() {
         if (!mapsDataPromise) {
@@ -102,7 +103,7 @@ function buildFleasioUI(state, config, save) {
         border: "1px solid rgba(255,255,255,0.08)",
         opacity: "0", transform: "scale(0.92) translateY(-10px)",
         transformOrigin: "top right", pointerEvents: "none",
-        transition: "opacity 0.18s ease, transform 0.18s ease",
+        transition: "opacity 0.18s ease, transform 0.18s ease, width 0.18s ease, height 0.18s ease, border-radius 0.18s ease",
         touchAction: "pan-y", overscrollBehavior: "contain",
         WebkitOverflowScrolling: "touch",
     });
@@ -114,7 +115,11 @@ function buildFleasioUI(state, config, save) {
                 <div style="font-weight:bold;font-size:15px;">Fleasio</div>
                 <div style="opacity:0.5;font-size:11px;">Asset Replacer</div>
             </div>
-            <span id="fl-close" style="cursor:pointer;opacity:0.6;font-size:16px;">✕</span>
+            <div>
+                <span id="fl-fullscreen" title="Toggle fullscreen"
+                    style="cursor:pointer;opacity:0.6;font-size:15px;margin-right:12px;">⛶</span>
+                <span id="fl-close" style="cursor:pointer;opacity:0.6;font-size:16px;">✕</span>
+            </div>
         </div>
         <div style="padding:14px;">
             <div style="font-weight:bold;margin-bottom:8px;opacity:0.8;">Replacements</div>
@@ -125,11 +130,19 @@ function buildFleasioUI(state, config, save) {
             <input id="fl-replacement" placeholder="Replacement link (or map:...)"
                 style="width:100%;margin-bottom:8px;padding:8px;box-sizing:border-box;
                        background:#222;border:1px solid #333;border-radius:6px;color:#eee;">
-            <button id="fl-add" style="width:100%;padding:8px;margin-bottom:14px;cursor:pointer;
-                       background:#6366f1;border:none;border-radius:6px;color:#fff;font-weight:bold;
-                       transition:transform 0.1s, background 0.15s;">
-                + Add
-            </button>
+            <div style="display:flex;gap:8px;margin-bottom:14px;">
+                <button id="fl-add" style="flex:2;padding:8px;cursor:pointer;
+                           background:#6366f1;border:none;border-radius:6px;color:#fff;font-weight:bold;
+                           transition:transform 0.1s, background 0.15s;">
+                    + Add
+                </button>
+                <button id="fl-reload" title="Reload the page to apply changes now"
+                           style="flex:1;padding:8px;cursor:pointer;
+                           background:#333;border:none;border-radius:6px;color:#fff;font-weight:bold;
+                           transition:transform 0.1s, background 0.15s;">
+                    ⟳ Reload
+                </button>
+            </div>
             <div id="fl-list"></div>
             <div style="border-top:1px solid rgba(255,255,255,0.08);margin:14px 0;"></div>
             <div style="font-weight:bold;margin-bottom:10px;opacity:0.8;">Settings</div>
@@ -212,6 +225,19 @@ function buildFleasioUI(state, config, save) {
         addBtn.addEventListener(evt, () => { addBtn.style.transform = "scale(1)"; })
     );
 
+    const reloadBtn = panel.querySelector("#fl-reload");
+    reloadBtn.addEventListener("pointerdown", () => { reloadBtn.style.transform = "scale(0.96)"; });
+    ["pointerup", "pointercancel", "pointerleave"].forEach(evt =>
+        reloadBtn.addEventListener(evt, () => { reloadBtn.style.transform = "scale(1)"; })
+    );
+    // Note: this reloads the whole page. There's no hook into this game's
+    // Unity build to hot-swap just the current map's assets in place, so a
+    // full reload is the reliable equivalent of manually rejoining the map.
+    // Replacements/settings persist across it via GM storage.
+    reloadBtn.addEventListener("click", () => {
+        window.location.reload();
+    });
+
     function positionPanel() {
         const r = btn.getBoundingClientRect();
         let left = r.right - 300;
@@ -222,10 +248,32 @@ function buildFleasioUI(state, config, save) {
         panel.style.top = top + "px";
     }
 
+    function applyFullscreenLayout() {
+        if (panelFullscreen) {
+            panel.style.left = "0";
+            panel.style.top = "0";
+            panel.style.width = "100vw";
+            panel.style.height = "100vh";
+            panel.style.maxHeight = "100vh";
+            panel.style.borderRadius = "0";
+        } else {
+            panel.style.width = "300px";
+            panel.style.height = "";
+            panel.style.maxHeight = "65vh";
+            panel.style.borderRadius = "12px";
+            positionPanel();
+        }
+    }
+
+    panel.querySelector("#fl-fullscreen").addEventListener("click", () => {
+        panelFullscreen = !panelFullscreen;
+        applyFullscreenLayout();
+    });
+
     function setPanelOpen(open) {
         state.panelOpen = open;
         if (open) {
-            positionPanel();
+            if (!panelFullscreen) positionPanel();
             panel.style.pointerEvents = "auto";
             requestAnimationFrame(() => {
                 panel.style.opacity = "1";
@@ -234,7 +282,7 @@ function buildFleasioUI(state, config, save) {
             renderList();
         } else {
             panel.style.opacity = "0";
-            panel.style.transform = "scale(0.92) translateY(-10px)";
+            panel.style.transform = panelFullscreen ? "scale(1) translateY(0)" : "scale(0.92) translateY(-10px)";
             panel.style.pointerEvents = "none";
         }
     }
@@ -374,7 +422,7 @@ function buildFleasioUI(state, config, save) {
             btn.style.left = (startPos.x + dx) + "px";
             btn.style.top = (startPos.y + dy) + "px";
             btn.style.right = "auto";
-            if (state.panelOpen) positionPanel();
+            if (state.panelOpen && !panelFullscreen) positionPanel();
         }
     });
 

@@ -388,7 +388,7 @@ function buildFleasioUI(state, config, save) {
             : "0 3px 10px rgba(0,0,0,0.45)";
     }));
 
-    settings.appendChild(createToggle("Block Google Ads", state.adBlockEnabled, (val) => {
+    settings.appendChild(createToggle("Block Ads", state.adBlockEnabled, (val) => {
         state.adBlockEnabled = val;
         GM_setValue(config.ADBLOCK_KEY, val);
     }));

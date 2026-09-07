@@ -14,7 +14,7 @@ Fleasio works with both Tampermonkey and Violentmonkey on PC and mobile.
 
 For the best experience on mobile, Firefox is recommended.
 
-Recommended browser: "Firefox" (https://play.google.com/store/apps/details?id=org.mozilla.firefox)
+Recommended browser: [Firefox](https://play.google.com/store/apps/details?id=org.mozilla.firefox)
 
 ---
 
@@ -22,7 +22,7 @@ Recommended browser: "Firefox" (https://play.google.com/store/apps/details?id=or
 
 1. Install Tampermonkey
 
-Install "Tampermonkey" (https://chromewebstore.google.com/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo) from the Chrome Web Store.
+Install [Tamper Monkey](https://chromewebstore.google.com/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo) from the Chrome Web Store.
 
 2. Open Utilities
 
@@ -32,7 +32,9 @@ Navigate to the Utilities page in Tampermonkey.
 
 Select Import from URL and paste the following URL:
 
+```
 https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/fleasio.js
+```
 
 4. Install
 
@@ -46,7 +48,7 @@ Press Import.
 
 1. Install Violentmonkey
 
-Install "Violentmonkey" (https://chromewebstore.google.com/detail/violentmonkey/jinjaccalgkegednnccohejagnlnfdag).
+Install [Violent Monkey](https://chromewebstore.google.com/detail/violentmonkey/jinjaccalgkegednnccohejagnlnfdag).
 
 2. Create a New Script
 
@@ -55,6 +57,7 @@ Navigate to the Scripts page and press the + button.
 3. Install from URL
 
 Select Install from URL and paste the following URL:
+
 ```
 https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/fleasio.js
 ```

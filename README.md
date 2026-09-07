@@ -2,7 +2,7 @@
   <img src="images/FleasioLogo.png" alt="Fleasio Logo" width="300">
 </p><h2 align="center">
   Fleasio is a multi-purpose veck.io tool for custom textures, maps, and other changes.
-</h2>---
+</h2>
 
 📥 Installation
 

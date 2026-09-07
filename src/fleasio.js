@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fleasio
 // @namespace    fleasio-asset-replacer
-// @version      1.6
+// @version      1.7
 // @match        https://veck.io/*
 // @run-at       document-start
 // @grant        GM_xmlhttpRequest

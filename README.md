@@ -35,4 +35,10 @@ https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/fleasio.js
 
 ### Step 2, navigate to the scripts page, and press the + button.
 
-### Step 3, press
+### Step 3, press "Install from URL", and paste this in:
+
+```
+https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/fleasio.js
+```
+
+### Step 4, press install, and you are ready!

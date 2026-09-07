@@ -15,7 +15,7 @@
 
 ### Step 0.5, the recommended browser is [Firefox](https://play.google.com/store/apps/details?id=org.mozilla.firefox)
 
-## Universal Steps for Mobile & PC
+## Tamper Monkey for Mobile & PC
 
 ### Step 1, install [Tamper Monkey](https://chromewebstore.google.com/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo) in your chrome extension store.
 
@@ -28,3 +28,11 @@ https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/fleasio.js
 ```
 
 ### Step 4, press import, and you are ready!
+
+## Violent Monkey for Mobile & PC
+
+### Step 1, install [Violent Monkey](https://chromewebstore.google.com/detail/violentmonkey/jinjaccalgkegednnccohejagnlnfdag)
+
+### Step 2, navigate to the scripts page, and press the + button.
+
+### Step 3, press

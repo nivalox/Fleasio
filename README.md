@@ -11,9 +11,11 @@
 
 ## How to get Fleasio
 
-## For Mobile:
+## Mobile Browser:
 
 ### Step 0.5, the recommended browser is [Firefox](https://play.google.com/store/apps/details?id=org.mozilla.firefox)
+
+## Universal Steps for Mobile & PC
 
 ### Step 1, install [Tamper Monkey](https://chromewebstore.google.com/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo) in your chrome extension store.
 

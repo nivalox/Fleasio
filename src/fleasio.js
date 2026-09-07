@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fleasio
 // @namespace    fleasio-asset-replacer
-// @version      1.5
+// @version      1.6
 // @match        https://veck.io/*
 // @run-at       document-start
 // @grant        GM_xmlhttpRequest
@@ -50,12 +50,6 @@
     }
 
     // --- Ad banner removal (DOM-based) ---
-    // Ad networks route through many different domains, so blocking network
-    // requests is fragile. Removing the container that holds the banner
-    // works regardless of who's serving it. A MutationObserver (rather than
-    // a one-time sweep) catches it whenever it's (re)inserted — on load,
-    // after a refresh, or if the ad script tries to re-add it later without
-    // a refresh at all.
     function removeAdBanners() {
         if (!state.adBlockEnabled) return;
         document.querySelectorAll(AD_BANNER_SELECTOR).forEach(el => {
@@ -73,7 +67,7 @@
     //     phase so it always runs before listeners the game attaches to
     //     document/canvas, no matter when it attaches them. ---
     function isInsideFleasioUI(target) {
-        return !!(target && target.closest && target.closest('#fleasio-btn, #fleasio-panel'));
+        return !!(target && target.closest && target.closest('#fleasio-btn, #fleasio-panel, #fleasio-quickmenu'));
     }
 
     ['touchstart', 'touchmove', 'touchend'].forEach(evt => {

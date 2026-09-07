@@ -1,44 +1,66 @@
 <p align="center">
-  <img src="images/FleasioLogo.png" alt="Logo" width="300">
-</p>
+  <img src="images/FleasioLogo.png" alt="Fleasio Logo" width="300">
+</p><h2 align="center">
+  Fleasio is a multi-purpose veck.io tool for custom textures, maps, and other changes.
+</h2>---
 
-#
+📥 Installation
 
-<h2 
-    align="center">Fleasio is a multi-purpose veck.io tool allowing for custom textures, and other changes.
-</h2>
+Fleasio works with both Tampermonkey and Violentmonkey on PC and mobile.
 
+«⭐ Violentmonkey is recommended.»
 
-## How to get Fleasio
+📱 Mobile Browser
 
-## Mobile Browser:
+For the best experience on mobile, Firefox is recommended.
 
-### Step 0.5, the recommended browser is [Firefox](https://play.google.com/store/apps/details?id=org.mozilla.firefox)
+Recommended browser: "Firefox" (https://play.google.com/store/apps/details?id=org.mozilla.firefox)
 
-## Tamper Monkey for Mobile & PC
+---
 
-### Step 1, install [Tamper Monkey](https://chromewebstore.google.com/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo) in your chrome extension store.
+🐒 Tampermonkey, Mobile & PC
 
-### Step 2, navigate to the utilities page in Tamper Monkey.
+1. Install Tampermonkey
 
-### Step 3, go to import from URL, and paste this in:
+Install "Tampermonkey" (https://chromewebstore.google.com/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo) from the Chrome Web Store.
 
+2. Open Utilities
+
+Navigate to the Utilities page in Tampermonkey.
+
+3. Import Fleasio
+
+Select Import from URL and paste the following URL:
+
+https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/fleasio.js
+
+4. Install
+
+Press Import.
+
+🎉 You're ready to use Fleasio!
+
+---
+
+🐒 Violentmonkey, Mobile & PC
+
+1. Install Violentmonkey
+
+Install "Violentmonkey" (https://chromewebstore.google.com/detail/violentmonkey/jinjaccalgkegednnccohejagnlnfdag).
+
+2. Create a New Script
+
+Navigate to the Scripts page and press the + button.
+
+3. Install from URL
+
+Select Install from URL and paste the following URL:
 ```
 https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/fleasio.js
 ```
 
-### Step 4, press import, and you are ready!
+4. Install
 
-## Violent Monkey for Mobile & PC
+Press Install.
 
-### Step 1, install [Violent Monkey](https://chromewebstore.google.com/detail/violentmonkey/jinjaccalgkegednnccohejagnlnfdag)
-
-### Step 2, navigate to the scripts page, and press the + button.
-
-### Step 3, press "Install from URL", and paste this in:
-
-```
-https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/fleasio.js
-```
-
-### Step 4, press install, and you are ready!
+🎉 You're ready to use Fleasio!

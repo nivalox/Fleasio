@@ -1,14 +1,17 @@
 // ==UserScript==
 // @name         Fleasio
 // @namespace    fleasio-asset-replacer
-// @version      1.7
+// @version      1.8
 // @match        https://veck.io/*
 // @run-at       document-start
 // @grant        GM_xmlhttpRequest
 // @grant        GM_setValue
 // @grant        GM_getValue
+// @grant        GM_addStyle
+// @grant        GM_getResourceText
 // @connect      *
-// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/UI.js
+// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/UI.js?v=1.8
+// @resource     fleasioCSS https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/style.css?v=1.8
 // ==/UserScript==
 
 (function () {
@@ -16,6 +19,8 @@
 
     const STORAGE_KEY = "veck_replacements";
     const ADBLOCK_KEY = "veck_adblock";
+    const MAINMENU_KEY_STORAGE = "veck_mainmenu_key";
+    const QUICKMENU_KEY_STORAGE = "veck_quickmenu_key";
     const MAPS_JSON_URL = "https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/assets/assetURLS/maps.json";
     const FLEASIO_MAPS_JSON_URL = "https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/assets/assetURLS/fleasionmaps.json";
     const AD_BANNER_SELECTOR = '.banner-container[id^="banner_"]';
@@ -23,6 +28,8 @@
     const state = {
         replacements: GM_getValue(STORAGE_KEY, []),
         adBlockEnabled: GM_getValue(ADBLOCK_KEY, false),
+        mainMenuKeybind: GM_getValue(MAINMENU_KEY_STORAGE, "ControlRight"),
+        quickMenuKeybind: GM_getValue(QUICKMENU_KEY_STORAGE, "ShiftRight"),
         moveMode: false,
         uiHidden: false,
         panelOpen: false,
@@ -62,12 +69,12 @@
     new MutationObserver(() => removeAdBanners())
         .observe(document.documentElement, { childList: true, subtree: true });
 
-    // --- Stop the game's global input-blocking (touch AND keyboard) from
-    //     reaching our UI. Registered on window (outermost) in the capture
-    //     phase so it always runs before listeners the game attaches to
-    //     document/canvas, no matter when it attaches them. ---
+    // --- Stop the game's global input-blocking (touch, keyboard, AND wheel)
+    //     from reaching our UI. Registered on window (outermost) in the
+    //     capture phase so it always runs before listeners the game attaches
+    //     to document/canvas, no matter when it attaches them. ---
     function isInsideFleasioUI(target) {
-        return !!(target && target.closest && target.closest('#fleasio-btn, #fleasio-panel, #fleasio-quickmenu'));
+        return !!(target && target.closest && target.closest('#fleasio-btn, #fleasio-panel, #fleasio-quickmenu, #fleasio-settingsmenu'));
     }
 
     ['touchstart', 'touchmove', 'touchend'].forEach(evt => {
@@ -85,6 +92,12 @@
             }
         }, { capture: true });
     });
+
+    window.addEventListener('wheel', (e) => {
+        if (isInsideFleasioUI(e.target)) {
+            e.stopImmediatePropagation();
+        }
+    }, { capture: true, passive: true });
 
     const realFetch = unsafeWindow.fetch.bind(unsafeWindow);
     unsafeWindow.fetch = async function (input, init) {
@@ -154,12 +167,24 @@
         });
     };
 
-    const config = { STORAGE_KEY, ADBLOCK_KEY, MAPS_JSON_URL, FLEASIO_MAPS_JSON_URL };
+    const config = {
+        STORAGE_KEY, ADBLOCK_KEY, MAINMENU_KEY_STORAGE, QUICKMENU_KEY_STORAGE,
+        MAPS_JSON_URL, FLEASIO_MAPS_JSON_URL,
+    };
 
     function init() {
         if (typeof buildFleasioUI !== "function") {
             console.error("[Fleasio] UI.js did not load — check the @require URL / network access.");
             return;
+        }
+        try {
+            if (typeof GM_addStyle === "function" && typeof GM_getResourceText === "function") {
+                GM_addStyle(GM_getResourceText("fleasioCSS"));
+            } else {
+                console.error("[Fleasio] GM_addStyle/GM_getResourceText unavailable — style.css not applied.");
+            }
+        } catch (e) {
+            console.error("[Fleasio] Failed to load style.css", e);
         }
         buildFleasioUI(state, config, save);
     }

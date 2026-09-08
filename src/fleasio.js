@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fleasio
 // @namespace    fleasio-asset-replacer
-// @version      1.9
+// @version      2.0
 // @match        https://veck.io/*
 // @run-at       document-start
 // @grant        GM_xmlhttpRequest
@@ -10,8 +10,8 @@
 // @grant        GM_addStyle
 // @grant        GM_getResourceText
 // @connect      *
-// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/UI.js?v=1.9
-// @resource     fleasioCSS https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/style.css?v=1.9
+// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/UI.js?v=2.0
+// @resource     fleasioCSS https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/style.css?v=2.0
 // ==/UserScript==
 
 (function () {
@@ -82,11 +82,9 @@
     //     Exception: while state.capturingKeybind is true (the user is
     //     actively pressing a key to rebind a shortcut in Settings), this
     //     shield stands down so that capture-phase listener — also on
-    //     window, but registered later — actually gets the event. Without
-    //     this, the shield firing first and calling stopImmediatePropagation
-    //     would silently swallow every key the rebind picker tries to read. ---
+    //     window, but registered later — actually gets the event. ---
     function isInsideFleasioUI(target) {
-        return !!(target && target.closest && target.closest('#fleasio-btn, #fleasio-panel, #fleasio-quickmenu, #fleasio-settingsmenu, #fleasio-ping'));
+        return !!(target && target.closest && target.closest('#fleasio-btn, #fleasio-panel, #fleasio-quickmenu, #fleasio-settingsmenu, #fleasio-stats'));
     }
 
     ['touchstart', 'touchmove', 'touchend'].forEach(evt => {

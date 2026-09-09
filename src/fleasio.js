@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fleasio
 // @namespace    fleasio-asset-replacer
-// @version      2.0
+// @version      2.1
 // @match        https://veck.io/*
 // @run-at       document-start
 // @grant        GM_xmlhttpRequest
@@ -10,8 +10,8 @@
 // @grant        GM_addStyle
 // @grant        GM_getResourceText
 // @connect      *
-// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/UI.js?v=2.0
-// @resource     fleasioCSS https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/style.css?v=2.0
+// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/UI.js?v=2.1
+// @resource     fleasioCSS https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/style.css?v=2.1
 // ==/UserScript==
 
 (function () {
@@ -23,17 +23,21 @@
     const QUICKMENU_KEY_STORAGE = "veck_quickmenu_key";
     const SETTINGSMENU_KEY_STORAGE = "veck_settingsmenu_key";
     const POSITIONS_KEY = "veck_positions";
+    const STATS_ENABLED_KEY = "veck_stats_enabled";
+    const STATS_MODE_KEY = "veck_stats_mode";
     const MAPS_JSON_URL = "https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/assets/assetURLS/maps.json";
     const FLEASIO_MAPS_JSON_URL = "https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/assets/assetURLS/fleasionmaps.json";
     const AD_BANNER_SELECTOR = '.banner-container[id^="banner_"]';
 
     const state = {
         replacements: GM_getValue(STORAGE_KEY, []),
-        adBlockEnabled: GM_getValue(ADBLOCK_KEY, false),
+        adBlockEnabled: GM_getValue(ADBLOCK_KEY, true),
         mainMenuKeybind: GM_getValue(MAINMENU_KEY_STORAGE, "ShiftRight"),
         quickMenuKeybind: GM_getValue(QUICKMENU_KEY_STORAGE, "ControlRight"),
         settingsMenuKeybind: GM_getValue(SETTINGSMENU_KEY_STORAGE, null),
         positions: GM_getValue(POSITIONS_KEY, {}),
+        statsEnabled: GM_getValue(STATS_ENABLED_KEY, false),
+        statsMode: GM_getValue(STATS_MODE_KEY, "ping"),
         moveMode: false,
         uiHidden: false,
         panelOpen: false,
@@ -180,7 +184,8 @@
 
     const config = {
         STORAGE_KEY, ADBLOCK_KEY, MAINMENU_KEY_STORAGE, QUICKMENU_KEY_STORAGE,
-        SETTINGSMENU_KEY_STORAGE, POSITIONS_KEY, MAPS_JSON_URL, FLEASIO_MAPS_JSON_URL,
+        SETTINGSMENU_KEY_STORAGE, POSITIONS_KEY, STATS_ENABLED_KEY, STATS_MODE_KEY,
+        MAPS_JSON_URL, FLEASIO_MAPS_JSON_URL,
     };
 
     function init() {

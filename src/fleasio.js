@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fleasio
 // @namespace    fleasio-asset-replacer
-// @version      2.1
+// @version      2.2
 // @match        https://veck.io/*
 // @run-at       document-start
 // @grant        GM_xmlhttpRequest
@@ -10,8 +10,8 @@
 // @grant        GM_addStyle
 // @grant        GM_getResourceText
 // @connect      *
-// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/UI.js?v=2.1
-// @resource     fleasioCSS https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/style.css?v=2.1
+// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/UI.js?v=2.2
+// @resource     fleasioCSS https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/style.css?v=2.2
 // ==/UserScript==
 
 (function () {
@@ -25,6 +25,8 @@
     const POSITIONS_KEY = "veck_positions";
     const STATS_ENABLED_KEY = "veck_stats_enabled";
     const STATS_MODE_KEY = "veck_stats_mode";
+    const SENSITIVITY_ENABLED_KEY = "veck_sensitivity_enabled";
+    const SENSITIVITY_MULT_KEY = "veck_sensitivity_mult";
     const MAPS_JSON_URL = "https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/assets/assetURLS/maps.json";
     const FLEASIO_MAPS_JSON_URL = "https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/assets/assetURLS/fleasionmaps.json";
     const AD_BANNER_SELECTOR = '.banner-container[id^="banner_"]';
@@ -38,6 +40,8 @@
         positions: GM_getValue(POSITIONS_KEY, {}),
         statsEnabled: GM_getValue(STATS_ENABLED_KEY, false),
         statsMode: GM_getValue(STATS_MODE_KEY, "ping"),
+        sensitivityEnabled: GM_getValue(SENSITIVITY_ENABLED_KEY, false),
+        sensitivityMultiplier: GM_getValue(SENSITIVITY_MULT_KEY, 1),
         moveMode: false,
         uiHidden: false,
         panelOpen: false,
@@ -114,6 +118,100 @@
         }
     }, { capture: true, passive: true });
 
+    // --- Game Sensitivity (mobile only, experimental) ---
+    // The game has no touch-sensitivity setting of its own. This rescales
+    // touch movement deltas on the canvas before the game's input handling
+    // sees them, by suppressing the real touchmove and dispatching a
+    // synthetic one with a scaled position instead. This only affects the
+    // ORIGIN of touch data the game receives — whether it changes the
+    // camera feel depends on how the game's Unity build actually reads
+    // touch input internally, which isn't something a userscript can see
+    // into ahead of time. Tracks each touch identifier independently, but
+    // is only built out for a single actively-dragged touch; a second
+    // simultaneous touch (e.g. a virtual joystick held with the other
+    // thumb) is tracked too but hasn't been tested for interference.
+    const sensitivityTouchTracker = {};
+
+    function getGameCanvas() {
+        return document.querySelector('canvas');
+    }
+
+    window.addEventListener('touchstart', (e) => {
+        if (!state.sensitivityEnabled || state.sensitivityMultiplier === 1) return;
+        if (isInsideFleasioUI(e.target)) return;
+        for (const touch of e.changedTouches) {
+            sensitivityTouchTracker[touch.identifier] = {
+                lastRealX: touch.clientX, lastRealY: touch.clientY,
+                virtualX: touch.clientX, virtualY: touch.clientY,
+            };
+        }
+    }, { capture: true, passive: true });
+
+    window.addEventListener('touchmove', (e) => {
+        if (!state.sensitivityEnabled || state.sensitivityMultiplier === 1) return;
+        if (isInsideFleasioUI(e.target)) return;
+        const canvas = getGameCanvas();
+        if (!canvas || !canvas.contains(e.target)) return;
+        if (typeof Touch !== "function") return; // Touch() constructor unsupported
+
+        let modified = false;
+        const allTouches = [];
+
+        for (let i = 0; i < e.touches.length; i++) {
+            const touch = e.touches[i];
+            const id = touch.identifier;
+            let tracked = sensitivityTouchTracker[id];
+            if (!tracked) {
+                tracked = { lastRealX: touch.clientX, lastRealY: touch.clientY, virtualX: touch.clientX, virtualY: touch.clientY };
+                sensitivityTouchTracker[id] = tracked;
+            }
+            const dx = touch.clientX - tracked.lastRealX;
+            const dy = touch.clientY - tracked.lastRealY;
+            if (dx !== 0 || dy !== 0) modified = true;
+            tracked.virtualX += dx * state.sensitivityMultiplier;
+            tracked.virtualY += dy * state.sensitivityMultiplier;
+            tracked.lastRealX = touch.clientX;
+            tracked.lastRealY = touch.clientY;
+
+            allTouches.push(new Touch({
+                identifier: id,
+                target: touch.target,
+                clientX: tracked.virtualX,
+                clientY: tracked.virtualY,
+                screenX: touch.screenX + (tracked.virtualX - touch.clientX),
+                screenY: touch.screenY + (tracked.virtualY - touch.clientY),
+                pageX: touch.pageX + (tracked.virtualX - touch.clientX),
+                pageY: touch.pageY + (tracked.virtualY - touch.clientY),
+                radiusX: touch.radiusX, radiusY: touch.radiusY,
+                rotationAngle: touch.rotationAngle, force: touch.force,
+            }));
+        }
+
+        if (!modified) return;
+
+        e.stopImmediatePropagation();
+        e.preventDefault();
+
+        try {
+            const synthetic = new TouchEvent('touchmove', {
+                touches: allTouches,
+                targetTouches: allTouches,
+                changedTouches: allTouches,
+                bubbles: true,
+                cancelable: true,
+            });
+            e.target.dispatchEvent(synthetic);
+        } catch (err) {
+            console.error("[Fleasio] Failed to dispatch synthetic touch event", err);
+        }
+    }, { capture: true, passive: false });
+
+    window.addEventListener('touchend', (e) => {
+        for (const touch of e.changedTouches) {
+            delete sensitivityTouchTracker[touch.identifier];
+        }
+    }, { capture: true, passive: true });
+
     const realFetch = unsafeWindow.fetch.bind(unsafeWindow);
     unsafeWindow.fetch = async function (input, init) {
         const url = typeof input === "string" ? input : input.url;
@@ -185,7 +283,7 @@
     const config = {
         STORAGE_KEY, ADBLOCK_KEY, MAINMENU_KEY_STORAGE, QUICKMENU_KEY_STORAGE,
         SETTINGSMENU_KEY_STORAGE, POSITIONS_KEY, STATS_ENABLED_KEY, STATS_MODE_KEY,
-        MAPS_JSON_URL, FLEASIO_MAPS_JSON_URL,
+        SENSITIVITY_ENABLED_KEY, SENSITIVITY_MULT_KEY, MAPS_JSON_URL, FLEASIO_MAPS_JSON_URL,
     };
 
     function init() {

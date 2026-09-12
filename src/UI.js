@@ -305,112 +305,6 @@ function buildFleasioUI(state, config, save) {
         return row;
     }
 
-    // Game Sensitivity toggle row: label, gear icon opening a slider for the
-    // touch-movement multiplier, and the enable/disable switch. Greyed out
-    // entirely on non-touch devices since it has no effect there.
-    function createSensitivityToggle(initialEnabled, initialMultiplier, isTouchDevice, onToggleChange, onMultiplierChange) {
-        const row = document.createElement("div");
-        Object.assign(row.style, {
-            display: "flex", justifyContent: "space-between", alignItems: "center",
-            marginBottom: "10px", position: "relative",
-            opacity: isTouchDevice ? "1" : "0.4",
-        });
-
-        const text = document.createElement("span");
-        text.textContent = "Game Sensitivity";
-        if (!isTouchDevice) text.title = "Touch-only feature — no touch input detected";
-        row.appendChild(text);
-
-        const rightGroup = document.createElement("div");
-        Object.assign(rightGroup.style, { display: "flex", alignItems: "center", gap: "10px" });
-        row.appendChild(rightGroup);
-
-        const gearIcon = document.createElement("span");
-        gearIcon.textContent = "⚙";
-        Object.assign(gearIcon.style, {
-            cursor: isTouchDevice ? "pointer" : "default",
-            opacity: "0.6", fontSize: "14px",
-            pointerEvents: isTouchDevice ? "auto" : "none",
-        });
-        rightGroup.appendChild(gearIcon);
-
-        const track = document.createElement("div");
-        Object.assign(track.style, {
-            width: "42px", height: "24px", borderRadius: "12px", position: "relative",
-            cursor: isTouchDevice ? "pointer" : "default", transition: "background 0.2s",
-            background: initialEnabled ? "#6366f1" : "#444",
-            pointerEvents: isTouchDevice ? "auto" : "none",
-        });
-        const knob = document.createElement("div");
-        Object.assign(knob.style, {
-            width: "18px", height: "18px", borderRadius: "50%", background: "#fff",
-            position: "absolute", top: "3px", left: initialEnabled ? "21px" : "3px",
-            transition: "left 0.2s",
-        });
-        track.appendChild(knob);
-        rightGroup.appendChild(track);
-
-        let enabled = initialEnabled;
-        if (isTouchDevice) {
-            track.addEventListener("click", () => {
-                enabled = !enabled;
-                track.style.background = enabled ? "#6366f1" : "#444";
-                knob.style.left = enabled ? "21px" : "3px";
-                onToggleChange(enabled);
-            });
-        }
-
-        const dropdown = document.createElement("div");
-        Object.assign(dropdown.style, {
-            position: "absolute", top: "100%", right: "0", marginTop: "6px",
-            zIndex: 2147483647, background: "#1c1c1e", border: "1px solid #333",
-            borderRadius: "8px", display: "none", width: "180px", padding: "10px 12px",
-            boxShadow: "0 4px 14px rgba(0,0,0,0.5)",
-        });
-        row.appendChild(dropdown);
-
-        const sliderLabel = document.createElement("div");
-        Object.assign(sliderLabel.style, { fontSize: "12px", opacity: "0.7", marginBottom: "6px" });
-        const valueSpan = document.createElement("span");
-        valueSpan.textContent = initialMultiplier.toFixed(2) + "x";
-        sliderLabel.textContent = "Sensitivity: ";
-        sliderLabel.appendChild(valueSpan);
-        dropdown.appendChild(sliderLabel);
-
-        const slider = document.createElement("input");
-        slider.type = "range";
-        slider.min = "25";
-        slider.max = "300";
-        slider.value = String(Math.round(initialMultiplier * 100));
-        slider.style.width = "100%";
-        dropdown.appendChild(slider);
-
-        slider.addEventListener("input", () => {
-            const mult = Number(slider.value) / 100;
-            valueSpan.textContent = mult.toFixed(2) + "x";
-            onMultiplierChange(mult, false);
-        });
-        slider.addEventListener("change", () => {
-            const mult = Number(slider.value) / 100;
-            onMultiplierChange(mult, true);
-        });
-
-        if (isTouchDevice) {
-            gearIcon.addEventListener("click", (e) => {
-                e.stopPropagation();
-                dropdown.style.display = dropdown.style.display === "none" ? "block" : "none";
-            });
-
-            document.addEventListener("click", (e) => {
-                if (dropdown.style.display === "none") return;
-                if (e.target === gearIcon || dropdown.contains(e.target)) return;
-                dropdown.style.display = "none";
-            });
-        }
-
-        return row;
-    }
-
     // --- Reusable floating overlay (used by Quick Toggles and Settings) ---
     // Centered by default, drag-to-move via its header when Move UI is on,
     // with its own fullscreen/close controls matching the main panel.
@@ -791,22 +685,6 @@ function buildFleasioUI(state, config, save) {
             state.statsMode = mode;
             GM_setValue(config.STATS_MODE_KEY, mode);
             if (state.statsEnabled) { stopStats(); startStats(); }
-        }
-    ));
-
-    addSectionLabel(quickMenuOverlay.content, "Game");
-    const isTouchDevice = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
-    quickMenuOverlay.content.appendChild(createSensitivityToggle(
-        state.sensitivityEnabled,
-        state.sensitivityMultiplier,
-        isTouchDevice,
-        (enabled) => {
-            state.sensitivityEnabled = enabled;
-            GM_setValue(config.SENSITIVITY_ENABLED_KEY, enabled);
-        },
-        (mult, shouldPersist) => {
-            state.sensitivityMultiplier = mult;
-            if (shouldPersist) GM_setValue(config.SENSITIVITY_MULT_KEY, mult);
         }
     ));
 

@@ -1,0 +1,29 @@
+{
+  "Non-Game Maps": {
+    "Fleasio Map Selector": {
+      "URL": "https://github.com/nivalox/Fleasio/raw/refs/heads/main/assets/maps/mapselector.bundle"
+    }
+  },
+  "Side Maps": {
+    "Nivalos Training": {
+      "URL": "https://github.com/nivalox/Fleasio/raw/refs/heads/main/assets/maps/training.bundle"
+    },
+    "Night Training": {
+      "URL": "https://github.com/nivalox/Fleasio/raw/refs/heads/main/assets/maps/nighttraining.bundle"
+    }
+  },
+  "Main Maps": {
+    "Nivalos Arena": {
+      "URL": "https://github.com/nivalox/Fleasio/raw/refs/heads/main/assets/maps/arena.bundle"
+    },
+    "Night Arena": {
+      "URL": "https://github.com/nivalox/Fleasio/raw/refs/heads/main/assets/maps/nightarena.bundle"
+    },
+    "Night Circle Arena": {
+      "URL": "https://github.com/nivalox/Fleasio/raw/refs/heads/main/assets/maps/nightcirclearena.bundle"
+    },
+    "Night Block Arena": {
+      "URL": "https://github.com/nivalox/Fleasio/raw/refs/heads/main/assets/maps/nightblockarena.bundle"
+    }
+  }
+}

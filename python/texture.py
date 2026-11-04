@@ -6,9 +6,9 @@ Combines decompile (extract assets from a .bundle) and recompile (repack
 edited files back into a .bundle) into one script with a simple menu.
 
 Usage:
-    python text.py                          # interactive menu
-    python text.py decompile <url> [dir]    # non-interactive
-    python text.py recompile <url> [dir]
+    python texture.py                          # interactive menu
+    python texture.py decompile <url> [dir]    # non-interactive
+    python texture.py recompile <url> [dir]
 
 Special-cased asset types (extract on decompile / re-import on recompile):
     Texture2D  -> .png
@@ -243,14 +243,16 @@ def decompile(url, save_dir):
     download(url)
 
     print("[*] Loading bundle...")
-    env = UnityPy.load(BUNDLE)
+    try:
+        env = UnityPy.load(BUNDLE)
 
-    found_any = False
-    for obj in env.objects:
-        if export_object(obj, save_dir):
-            found_any = True
-
-    os.remove(BUNDLE)
+        found_any = False
+        for obj in env.objects:
+            if export_object(obj, save_dir):
+                found_any = True
+    finally:
+        if os.path.exists(BUNDLE):
+            os.remove(BUNDLE)
 
     if not found_any:
         print("[-] Nothing was exported from this bundle")
@@ -262,26 +264,30 @@ def recompile(url, save_dir):
     download(url)
 
     print("[*] Loading bundle...")
-    env = UnityPy.load(BUNDLE)
+    try:
+        env = UnityPy.load(BUNDLE)
 
-    modified_any = False
-    for obj in env.objects:
-        if import_object(obj, save_dir):
-            modified_any = True
+        modified_any = False
+        for obj in env.objects:
+            if import_object(obj, save_dir):
+                modified_any = True
 
-    if not modified_any:
-        print("[-] Nothing was modified — no matching edited files found. Exiting.")
-        os.remove(BUNDLE)
-        sys.exit(1)
+        if not modified_any:
+            print("[-] Nothing was modified — no matching edited files found. Exiting.")
+            sys.exit(1)
 
-    out_name = os.path.splitext(os.path.basename(url))[0] + "_modified.bundle"
-    out_path = os.path.join(save_dir, out_name)
+        os.makedirs(save_dir, exist_ok=True)
+        base = os.path.basename(url.split("?", 1)[0].split("#", 1)[0])
+        out_name = os.path.splitext(base)[0] + "_modified.bundle"
+        out_path = os.path.join(save_dir, out_name)
 
-    print("[*] Repacking bundle...")
-    with open(out_path, "wb") as f:
-        f.write(env.file.save(packer="original"))
+        print("[*] Repacking bundle...")
+        with open(out_path, "wb") as f:
+            f.write(env.file.save(packer="original"))
+    finally:
+        if os.path.exists(BUNDLE):
+            os.remove(BUNDLE)
 
-    os.remove(BUNDLE)
     print(f"[+] Modified bundle saved: {out_path}")
 
 
@@ -312,4 +318,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-  

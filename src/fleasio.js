@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fleasio
 // @namespace    fleasio-asset-replacer
-// @version      2.3
+// @version      2.8
 // @match        https://veck.io/*
 // @run-at       document-start
 // @grant        GM_xmlhttpRequest
@@ -9,9 +9,10 @@
 // @grant        GM_getValue
 // @grant        GM_addStyle
 // @grant        GM_getResourceText
+// @grant        unsafeWindow
 // @connect      *
-// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/UI.js?v=2.3
-// @resource     fleasioCSS https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/style.css?v=2.3
+// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/UI.js?v=2.8
+// @resource     fleasioCSS https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/style.css?v=2.8
 // ==/UserScript==
 
 (function () {
@@ -26,7 +27,7 @@
     const STATS_ENABLED_KEY = "veck_stats_enabled";
     const STATS_MODE_KEY = "veck_stats_mode";
     const MAPS_JSON_URL = "https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/assets/assetURLS/maps.json";
-    const FLEASIO_MAPS_JSON_URL = "https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/assets/assetURLS/fleasionmaps.json";
+    const FLEASIO_MAPS_JSON_URL = "https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/assets/assetURLS/fleasiomaps.json";
     const AD_BANNER_SELECTOR = '.banner-container[id^="banner_"]';
 
     const state = {
@@ -48,8 +49,22 @@
         GM_setValue(STORAGE_KEY, state.replacements);
     }
 
+    // Normalises whatever fetch()/XHR was handed (string, URL, Request) to a string.
+    function urlToString(input) {
+        try {
+            if (typeof input === "string") return input;
+            if (input && typeof input.url === "string") return input.url;   // Request
+            if (input && typeof input.href === "string") return input.href; // URL
+            return String(input);
+        } catch (e) {
+            return "";
+        }
+    }
+
     function findReplacement(url) {
-        const entry = state.replacements.find(r => url.includes(r.match));
+        url = urlToString(url);
+        if (!url) return null;
+        const entry = state.replacements.find(r => r.match && url.includes(r.match));
         return entry ? entry.replacement : null;
     }
 
@@ -59,8 +74,12 @@
                 method: "GET",
                 url: localUrl,
                 responseType: "arraybuffer",
-                onload: (res) => resolve(res.response),
+                onload: (res) => {
+                    if (res.status >= 200 && res.status < 300 && res.response) resolve(res.response);
+                    else reject(new Error(`HTTP ${res.status} for ${localUrl}`));
+                },
                 onerror: reject,
+                ontimeout: reject,
             });
         });
     }
@@ -76,7 +95,7 @@
 
     removeAdBanners();
     new MutationObserver(() => removeAdBanners())
-        .observe(document.documentElement, { childList: true, subtree: true });
+        .observe(document, { childList: true, subtree: true });
 
     // --- Stop the game's global input-blocking (touch, keyboard, wheel)
     //     from reaching our UI. Registered on window (outermost) in the
@@ -116,23 +135,29 @@
 
     const realFetch = unsafeWindow.fetch.bind(unsafeWindow);
     unsafeWindow.fetch = async function (input, init) {
-        const url = typeof input === "string" ? input : input.url;
-        const method = (init && init.method) || (typeof input === "object" && input.method) || "GET";
+        const url = urlToString(input);
+        const method = (init && init.method) || (input && typeof input === "object" && input.method) || "GET";
 
         const localUrl = findReplacement(url);
 
         if (localUrl) {
             console.log(`[Fleasio] Intercepted fetch: ${url}`);
-            const buf = await fetchLocal(localUrl);
-            const body = method.toUpperCase() === "HEAD" ? null : buf;
-            return new Response(body, {
-                status: 200,
-                statusText: "OK",
-                headers: {
-                    "Content-Type": "application/octet-stream",
-                    "Content-Length": String(buf.byteLength),
-                },
-            });
+            try {
+                const buf = await fetchLocal(localUrl);
+                const body = method.toUpperCase() === "HEAD" ? null : buf;
+                return new Response(body, {
+                    status: 200,
+                    statusText: "OK",
+                    headers: {
+                        "Content-Type": "application/octet-stream",
+                        "Content-Length": String(buf.byteLength),
+                    },
+                });
+            } catch (e) {
+                // Replacement host down / 404 — fall through to the original asset
+                // instead of breaking the game's load.
+                console.error(`[Fleasio] Replacement failed for ${url}, using original`, e);
+            }
         }
 
         return realFetch(input, init);
@@ -143,7 +168,7 @@
     const realSend = RealXHR.prototype.send;
 
     RealXHR.prototype.open = function (method, url, ...rest) {
-        this._interceptUrl = url;
+        this._interceptUrl = urlToString(url);
         this._interceptMethod = method;
         return realOpen.call(this, method, url, ...rest);
     };
@@ -160,6 +185,10 @@
             url: localUrl,
             responseType: "arraybuffer",
             onload: (res) => {
+                if (!(res.status >= 200 && res.status < 300 && res.response)) {
+                    console.error(`[Fleasio] Replacement HTTP ${res.status} for ${xhr._interceptUrl}, using original`);
+                    return realSend.apply(xhr, args);
+                }
                 const buf = res.response;
                 const isHead = xhr._interceptMethod && xhr._interceptMethod.toUpperCase() === "HEAD";
 
@@ -178,7 +207,11 @@
                 xhr.dispatchEvent(new Event("load"));
                 xhr.dispatchEvent(new Event("loadend"));
             },
-            onerror: () => xhr.dispatchEvent(new Event("error")),
+            onerror: () => {
+                console.error(`[Fleasio] Replacement request failed for ${xhr._interceptUrl}, using original`);
+                realSend.apply(xhr, args);
+            },
+            ontimeout: () => realSend.apply(xhr, args),
         });
     };
 

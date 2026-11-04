@@ -773,6 +773,8 @@ function buildFleasioUI(state, config, save) {
         const isTyping = active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA" || active.isContentEditable);
         if (isTyping) return;
 
+        if (state.uiHidden) return;
+
         if (e.code === state.mainMenuKeybind) {
             e.preventDefault();
             setPanelOpen(!state.panelOpen);
@@ -838,8 +840,15 @@ function buildFleasioUI(state, config, save) {
                     padding: "8px 10px", cursor: "pointer",
                     borderBottom: "1px solid rgba(255,255,255,0.05)",
                 });
-                item.innerHTML = `<div style="font-size:13px;">${m.name}</div>
-                    <div style="font-size:10px;opacity:0.5;">${m.category}</div>`;
+                const nameEl = document.createElement("div");
+                nameEl.style.fontSize = "13px";
+                nameEl.textContent = m.name;
+                const catEl = document.createElement("div");
+                catEl.style.fontSize = "10px";
+                catEl.style.opacity = "0.5";
+                catEl.textContent = m.category;
+                item.appendChild(nameEl);
+                item.appendChild(catEl);
                 item.addEventListener("pointerdown", (e) => e.preventDefault());
                 item.addEventListener("click", () => {
                     input.value = mode === "match" ? m.url.split("/").pop() : m.url;
@@ -1001,7 +1010,7 @@ function buildFleasioUI(state, config, save) {
             list.appendChild(empty);
             return;
         }
-        state.replacements.forEach((r, i) => {
+        state.replacements.forEach((r) => {
             const row = document.createElement("div");
             Object.assign(row.style, {
                 display: "flex", justifyContent: "space-between", alignItems: "center",
@@ -1009,8 +1018,14 @@ function buildFleasioUI(state, config, save) {
                 padding: "8px", borderRadius: "6px",
                 transition: "opacity 0.15s ease, transform 0.15s ease",
             });
-            row.innerHTML = `<span style="flex:1;margin-right:6px;overflow:hidden;
-                text-overflow:ellipsis;white-space:nowrap;" title="${r.match}">${r.match}</span>`;
+            const label = document.createElement("span");
+            Object.assign(label.style, {
+                flex: "1", marginRight: "6px", overflow: "hidden",
+                textOverflow: "ellipsis", whiteSpace: "nowrap",
+            });
+            label.title = r.match;
+            label.textContent = r.match;
+            row.appendChild(label);
             const del = document.createElement("button");
             del.textContent = "✕";
             Object.assign(del.style, {
@@ -1019,7 +1034,8 @@ function buildFleasioUI(state, config, save) {
             del.addEventListener("click", () => {
                 row.classList.add("fleasio-row-exit");
                 setTimeout(() => {
-                    state.replacements.splice(i, 1);
+                    const idx = state.replacements.indexOf(r);
+                    if (idx !== -1) state.replacements.splice(idx, 1);
                     save();
                     renderList();
                 }, 150);

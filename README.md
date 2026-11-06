@@ -67,3 +67,37 @@ https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/fleasio.js
 Press Install.
 
 🎉 You're ready to use Fleasio!
+
+---
+
+🎮 Controls
+
+| | PC | Mobile |
+|---|---|---|
+| Main menu | Click the **F** icon, or Right Shift | Tap the icon |
+| Quick Toggles | Right Ctrl | Double-tap the icon |
+| Settings | ⚙ in the main menu (or bind a key) | ⚙ in the main menu |
+
+Settings lets you change the **icon opacity** and **icon size**, move or hide the UI, and rebind the shortcuts.
+
+---
+
+🗂️ Project structure
+
+```
+src/
+├── fleasio.js          Userscript entry point (header, settings keys, wiring)
+├── modules/            Features, one file each
+│   ├── utils.js          shared helpers (viewport clamping, dragging, ...)
+│   ├── adblock.js        ad banner removal
+│   ├── input-shield.js   keeps the game from swallowing touch/keys on the UI
+│   ├── network.js        fetch/XHR asset replacement
+│   ├── maps.js           map list loading for the browse dropdowns
+│   ├── keybinds.js       shortcut handling
+│   └── stats.js          ping / FPS HUD
+├── ui/
+│   ├── components.js     switches, sliders, keybind pickers, windows
+│   └── UI.js             builds the interface from those pieces
+└── css/
+    └── style.css         all styling
+```

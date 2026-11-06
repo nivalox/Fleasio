@@ -44,8 +44,10 @@
         STATS_MODE_KEY: "veck_stats_mode",
         ICON_OPACITY_KEY: "veck_icon_opacity",
         ICON_SIZE_KEY: "veck_icon_size",
+        PANEL_HEIGHT_KEY: "veck_panel_height",
         DEFAULT_ICON_OPACITY: 100,
         DEFAULT_ICON_SIZE: 40,
+        DEFAULT_PANEL_HEIGHT: 70,
         MAPS_JSON_URL: "https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/assets/assetURLS/maps.json",
         FLEASIO_MAPS_JSON_URL: "https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/assets/assetURLS/fleasiomaps.json",
     };
@@ -61,6 +63,7 @@
         statsMode: GM_getValue(config.STATS_MODE_KEY, "ping"),
         iconOpacity: fleasioStoredNumber(config.ICON_OPACITY_KEY, config.DEFAULT_ICON_OPACITY, 15, 100),
         iconSize: fleasioStoredNumber(config.ICON_SIZE_KEY, config.DEFAULT_ICON_SIZE, 28, 80),
+        panelHeight: fleasioStoredNumber(config.PANEL_HEIGHT_KEY, config.DEFAULT_PANEL_HEIGHT, 40, 95),
         moveMode: false,
         uiHidden: false,
         capturingKeybind: false,

@@ -39,7 +39,7 @@ function buildFleasioUI(state, config, save, modules) {
     function placePanel(el) {
         const r = btn.getBoundingClientRect();
         const w = el.offsetWidth || 300;
-        const h = Math.min(el.offsetHeight || 400, window.innerHeight * 0.7);
+        const h = el.offsetHeight || 400;
         const left = fleasioClamp(r.right - w, 8, Math.max(8, window.innerWidth - w - 8));
         let top = r.bottom + 8;
         if (top + h > window.innerHeight - 8) top = Math.max(8, r.top - 8 - h); // flip above the icon
@@ -61,6 +61,12 @@ function buildFleasioUI(state, config, save, modules) {
             onClick: () => { if (settingsOverlay) toggleOverlay(settingsOverlay); },
         }],
     });
+    // Max height of the main menu, as a % of the screen (CSS var read by .fl-overlay).
+    function applyPanelHeight() {
+        panel.el.style.setProperty("--fl-max-h", String(state.panelHeight));
+    }
+    applyPanelHeight();
+
     const quickMenu = fleasioCreateOverlay(ctx, { id: "fleasio-quickmenu", subtitle: "Quick Toggles", width: 250, positionKey: "quick" });
     settingsOverlay = fleasioCreateOverlay(ctx, { id: "fleasio-settingsmenu", subtitle: "Settings", width: 290, positionKey: "settings" });
     const overlays = [panel, quickMenu, settingsOverlay];
@@ -111,13 +117,22 @@ function buildFleasioUI(state, config, save, modules) {
 
         let items = [];
         let loading = false;
+        let open = false;      // is the list meant to be showing?
+        let browsing = false;  // opened with 🗺: typing filters the list instead of closing it
 
-        function hide() { dropdown.classList.remove("fl-show"); }
+        function hide() {
+            open = false;
+            browsing = false;
+            dropdown.classList.remove("fl-show");
+        }
 
         function render(filter) {
             dropdown.textContent = "";
             const term = (filter || "").toLowerCase();
-            const matches = items.filter(m => !term || m.name.toLowerCase().includes(term));
+            const matches = items.filter(m => !term
+                || m.name.toLowerCase().includes(term)
+                || m.category.toLowerCase().includes(term)
+                || String(m.url).toLowerCase().includes(term));
             if (!matches.length) {
                 dropdown.appendChild(fleasioEl("div", "fl-ac-empty", loading ? "Loading…" : "No maps found"));
             }
@@ -125,10 +140,11 @@ function buildFleasioUI(state, config, save, modules) {
                 const item = fleasioEl("div", "fl-ac-item");
                 item.appendChild(fleasioEl("div", "fl-ac-name", m.name));
                 item.appendChild(fleasioEl("div", "fl-ac-cat", m.category));
-                // pointerdown + preventDefault so the input doesn't blur (and
-                // close the list) before the selection registers.
-                item.addEventListener("pointerdown", (e) => {
-                    e.preventDefault();
+                // Select on click, NOT pointerdown: on a touch screen pointerdown
+                // fires the moment a finger lands, so trying to scroll the list
+                // would pick whatever map was under the finger. click only fires
+                // for a real tap.
+                item.addEventListener("click", () => {
                     input.value = mode === "match" ? m.url.split("/").pop() : m.url;
                     hide();
                 });
@@ -139,6 +155,7 @@ function buildFleasioUI(state, config, save, modules) {
         }
 
         async function show(filter) {
+            open = true;
             if (!items.length) {
                 loading = true;
                 render(filter);
@@ -146,38 +163,45 @@ function buildFleasioUI(state, config, save, modules) {
                     items = maps.flatten(await loadData());
                 } catch (e) {
                     console.error("[Fleasio] Could not load map list", e);
+                    loading = false;
+                    if (!open) return;
                     dropdown.textContent = "";
                     dropdown.appendChild(fleasioEl("div", "fl-ac-empty", "Couldn’t load maps — check your connection"));
                     dropdown.classList.add("fl-show");
-                    loading = false;
                     return;
                 }
                 loading = false;
             }
-            render(filter);
+            if (open) render(filter); // skip if the user closed it while loading
         }
 
-        // The delayed hide on blur must be cancelled if the field is focused
-        // again, or a stale timer closes the list the user just opened.
-        let hideTimer = null;
         input.addEventListener("input", () => {
-            clearTimeout(hideTimer);
             const val = input.value;
             const idx = val.toLowerCase().indexOf("map:");
-            if (idx !== -1) show(val.slice(idx + 4).trim());
-            else hide();
-        });
-        input.addEventListener("focus", () => clearTimeout(hideTimer));
-        input.addEventListener("blur", () => { hideTimer = setTimeout(hide, 150); });
-        browse.addEventListener("pointerdown", (e) => e.preventDefault());
-        browse.addEventListener("click", () => {
-            clearTimeout(hideTimer);
-            if (dropdown.classList.contains("fl-show")) hide();
-            else show("");
+            if (idx !== -1) {
+                show(val.slice(idx + 4).trim());      // "map:name" shortcut
+            } else if (browsing) {
+                show(val.trim());                     // opened via 🗺: filter by what's typed
+            } else {
+                hide();
+            }
         });
 
-        // Tapping anywhere outside this field closes the list (the 🗺 button
-        // opens it without focusing the input, so blur alone can't do it).
+        // mousedown preventDefault keeps focus (and the on-screen keyboard) on
+        // the input when the 🗺 button is pressed. It doesn't affect touch scrolling.
+        browse.addEventListener("mousedown", (e) => e.preventDefault());
+        browse.addEventListener("click", () => {
+            if (dropdown.classList.contains("fl-show")) {
+                hide();
+            } else {
+                browsing = true;
+                show("");
+            }
+        });
+
+        // Tapping anywhere outside this field closes the list. (There's no
+        // blur-to-close: on touch, tapping the list itself would blur the input
+        // and close it mid-scroll.)
         window.addEventListener("pointerdown", (e) => {
             if (!field.contains(e.target)) hide();
         }, true);
@@ -348,6 +372,22 @@ function buildFleasioUI(state, config, save, modules) {
         reflowAll();
     }));
 
+    fleasioSectionLabel(sBody, "Main menu");
+    const heightSlider = fleasioSlider({
+        label: "Max height", min: 40, max: 95, step: 5, value: state.panelHeight, unit: "%",
+        onInput: (v) => { state.panelHeight = v; applyPanelHeight(); panel.reflow(); },
+        onChange: (v) => { GM_setValue(config.PANEL_HEIGHT_KEY, v); reflowAll(); },
+    });
+    sBody.appendChild(heightSlider.el);
+    sBody.appendChild(fleasioEl("div", "fl-hint", "Taller shows more replacements and map results at once."));
+    sBody.appendChild(fleasioButton("Reset height", "secondary", () => {
+        state.panelHeight = config.DEFAULT_PANEL_HEIGHT;
+        heightSlider.set(state.panelHeight);
+        GM_setValue(config.PANEL_HEIGHT_KEY, state.panelHeight);
+        applyPanelHeight();
+        reflowAll();
+    }));
+
     fleasioSectionLabel(sBody, "Interface");
     function setMoveMode(on) {
         state.moveMode = on;
@@ -460,7 +500,14 @@ function buildFleasioUI(state, config, save, modules) {
         overlays.forEach(o => o.reflow());
         fleasioClampToViewport(stats.el);
     }
-    window.addEventListener("resize", reflowAll);
+    // The on-screen keyboard resizes the viewport on some mobile browsers.
+    // Re-seating windows while someone is typing makes them jump around, so
+    // wait until the field loses focus (the keyboard closing fires resize again).
+    function isTypingInUI() {
+        const a = document.activeElement;
+        return !!(a && a.tagName === "INPUT" && fleasioIsInsideUI(a));
+    }
+    window.addEventListener("resize", () => { if (!isTypingInUI()) reflowAll(); });
     window.addEventListener("orientationchange", () => setTimeout(reflowAll, 200));
 
     [panel, quickMenu, settingsOverlay].forEach(o => o.place());

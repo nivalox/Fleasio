@@ -77,8 +77,8 @@
     position: fixed;
     z-index: 2147483647;
     width: min(var(--fl-w, 300px), calc(100vw - 16px));
-    max-height: 70vh;
-    max-height: 70dvh;
+    max-height: calc(var(--fl-max-h, 70) * 1vh);
+    max-height: calc(var(--fl-max-h, 70) * 1dvh);
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -267,7 +267,7 @@
     top: 100%;
     z-index: 10;
     margin-top: 4px;
-    max-height: 180px;
+    max-height: min(240px, 40vh);
     overflow-y: auto;
     overscroll-behavior: contain;
     touch-action: pan-y;

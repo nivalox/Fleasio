@@ -1,4 +1,4 @@
-// Fleasio — reusable UI building blocks (switches, sliders, keybind pickers,
+// Fleasio: reusable UI building blocks (switches, sliders, keybind pickers,
 // overlay windows...). Loaded via @require before UI.js. All styling lives in
 // src/css/style.css; these functions only build DOM and toggle classes.
 
@@ -230,7 +230,12 @@ function fleasioCreateOverlay(ctx, opts) {
 
     let isOpen = false;
     let isFullscreen = false;
+    let savedInline = null;   // left/top/right to restore after fullscreen
+    let hideTimer = null;
     let moved = fleasioRestorePosition(state, opts.positionKey, el);
+
+    // Closed windows are display:none, so they cost nothing to lay out or paint.
+    el.style.display = "none";
 
     function place() {
         if (moved || isFullscreen) return;
@@ -246,24 +251,65 @@ function fleasioCreateOverlay(ctx, opts) {
     }
 
     function setOpen(open) {
+        clearTimeout(hideTimer);
         isOpen = open;
         if (open) {
+            el.style.display = "";      // back to the stylesheet's display:flex
             place();
             if (!isFullscreen) fleasioClampToViewport(el);
             if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+            void el.offsetWidth;        // lay it out closed first so the open transition runs
+            el.classList.add("fl-open");
+        } else {
+            el.classList.remove("fl-open");
+            // Wait for the fade-out, then take it out of the layout entirely.
+            hideTimer = setTimeout(() => { if (!isOpen) el.style.display = "none"; }, 220);
         }
-        el.classList.toggle("fl-open", open);
         if (opts.onToggle) opts.onToggle(open);
     }
 
+    // Smoothly grows / shrinks the window between two rectangles (px).
+    // Animates left/top/width/height/radius with the Web Animations API, which
+    // is crisp (no stretched text, unlike a scale transform) and cheap for a
+    // single small element.
+    function animateBetween(from, to, entering) {
+        if (!el.animate) return;
+        if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+        const radius = parseFloat(getComputedStyle(el).getPropertyValue("--fl-radius")) || 14;
+        const frame = (r, br) => ({
+            left: r.left + "px", top: r.top + "px",
+            width: r.width + "px", height: r.height + "px",
+            maxHeight: "none", borderRadius: br + "px",
+        });
+        el.animate(
+            [frame(from, entering ? radius : 0), frame(to, entering ? 0 : radius)],
+            { duration: 300, easing: "cubic-bezier(0.22, 1, 0.36, 1)" }
+        );
+    }
+
     function setFullscreen(on) {
+        if (on === isFullscreen) return;
+        const from = isOpen ? el.getBoundingClientRect() : null;
+
         isFullscreen = on;
+        if (on) {
+            savedInline = { left: el.style.left, top: el.style.top, right: el.style.right };
+            el.style.left = "0px";
+            el.style.top = "0px";
+            el.style.right = "auto";
+        } else if (savedInline) {
+            el.style.left = savedInline.left;
+            el.style.top = savedInline.top;
+            el.style.right = savedInline.right;
+            savedInline = null;
+        }
         el.classList.toggle("fl-fullscreen", on);
         fsBtn.classList.toggle("fl-active", on);
         if (!on) {
             place();
             fleasioClampToViewport(el);
         }
+        if (from) animateBetween(from, el.getBoundingClientRect(), on);
     }
 
     closeBtn.addEventListener("click", () => setOpen(false));
@@ -293,7 +339,7 @@ function fleasioCreateOverlay(ctx, opts) {
         // Re-seat after a viewport change. Unmoved windows re-run placement,
         // moved ones are just pulled back on-screen.
         reflow() {
-            if (isFullscreen) return;
+            if (isFullscreen || !isOpen) return; // closed windows are re-placed when they open
             place();
             if (fleasioClampToViewport(el) && moved) {
                 fleasioRememberPosition(state, config, opts.positionKey, el);

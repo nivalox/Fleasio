@@ -1,4 +1,4 @@
-// Fleasio — shared "shell" pieces used by every script built on this UI
+// Fleasio: shared "shell" pieces used by every script built on this UI
 // (Fleasio itself and AssetFetcher): the common saved state, the floating
 // icon, the window layout wiring, and the standard Settings sections
 // (icon, menu height, move/hide UI, shortcuts, reset).
@@ -31,12 +31,19 @@ function fleasioApplyPanelHeight(panel, state) {
 // right-aligned under it, flipping above when there's no room below.
 function fleasioPlaceNearFab(fabEl) {
     return function (el) {
+        // Work from the icon's centre and its real (untransformed) size, so the
+        // result is the same even while the icon is mid pop-in or being pressed.
         const r = fabEl.getBoundingClientRect();
+        const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+        const iconRight = cx + fabEl.offsetWidth / 2;
+        const iconTop = cy - fabEl.offsetHeight / 2;
+        const iconBottom = cy + fabEl.offsetHeight / 2;
+
         const w = el.offsetWidth || 300;
         const h = el.offsetHeight || 400;
-        const left = fleasioClamp(r.right - w, 8, Math.max(8, window.innerWidth - w - 8));
-        let top = r.bottom + 8;
-        if (top + h > window.innerHeight - 8) top = Math.max(8, r.top - 8 - h);
+        const left = fleasioClamp(iconRight - w, 8, Math.max(8, window.innerWidth - w - 8));
+        let top = iconBottom + 8;
+        if (top + h > window.innerHeight - 8) top = Math.max(8, iconTop - 8 - h);
         el.style.left = left + "px";
         el.style.top = top + "px";
         el.style.right = "auto";
@@ -149,7 +156,14 @@ function fleasioWireLayout(ctx, opts) {
         const a = document.activeElement;
         return !!(a && a.tagName === "INPUT" && fleasioIsInsideUI(a));
     }
-    window.addEventListener("resize", () => { if (!isTypingInUI()) reflowAll(); });
+    // Resize events can arrive many times per frame (browser UI animating,
+    // window being dragged), so coalesce them into one reflow per frame.
+    let resizeQueued = false;
+    window.addEventListener("resize", () => {
+        if (resizeQueued || isTypingInUI()) return;
+        resizeQueued = true;
+        requestAnimationFrame(() => { resizeQueued = false; reflowAll(); });
+    });
     window.addEventListener("orientationchange", () => setTimeout(reflowAll, 200));
 
     return reflowAll;

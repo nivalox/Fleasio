@@ -1,10 +1,11 @@
-// Fleasio — asset replacement. Patches fetch() and XMLHttpRequest on the page
+// Fleasio: asset replacement. Patches fetch() and XMLHttpRequest on the page
 // so that any request whose URL contains a saved "match" is served from the
 // replacement URL instead. If the replacement can't be loaded the original
 // request goes through untouched, so a dead link never breaks the game.
 
 function fleasioInitNetwork(state) {
     function findReplacement(url) {
+        if (!state.replacements.length) return null; // fast path: nothing to replace
         url = fleasioUrlToString(url);
         if (!url) return null;
         const entry = state.replacements.find(r => r.match && url.includes(r.match));
@@ -28,32 +29,33 @@ function fleasioInitNetwork(state) {
     }
 
     // --- fetch ---
+    // Plain (non-async) wrapper: requests that aren't replaced go straight to
+    // the real fetch with no extra promise hop or allocation.
     const realFetch = unsafeWindow.fetch.bind(unsafeWindow);
-    unsafeWindow.fetch = async function (input, init) {
+    unsafeWindow.fetch = function (input, init) {
+        const localUrl = findReplacement(input);
+        if (!localUrl) return realFetch(input, init);
+
         const url = fleasioUrlToString(input);
         const method = (init && init.method) || (input && typeof input === "object" && input.method) || "GET";
+        console.log(`[Fleasio] Intercepted fetch: ${url}`);
 
-        const localUrl = findReplacement(url);
-
-        if (localUrl) {
-            console.log(`[Fleasio] Intercepted fetch: ${url}`);
-            try {
-                const buf = await fetchLocal(localUrl);
-                const body = method.toUpperCase() === "HEAD" ? null : buf;
-                return new Response(body, {
-                    status: 200,
-                    statusText: "OK",
-                    headers: {
-                        "Content-Type": "application/octet-stream",
-                        "Content-Length": String(buf.byteLength),
-                    },
-                });
-            } catch (e) {
-                console.error(`[Fleasio] Replacement failed for ${url}, using original`, e);
+        return fetchLocal(localUrl).then((buf) => new Response(
+            method.toUpperCase() === "HEAD" ? null : buf,
+            {
+                status: 200,
+                statusText: "OK",
+                headers: {
+                    "Content-Type": "application/octet-stream",
+                    "Content-Length": String(buf.byteLength),
+                },
             }
-        }
-
-        return realFetch(input, init);
+        )).catch((e) => {
+            // Replacement host down / 404: fall back to the original asset
+            // instead of breaking the game's load.
+            console.error(`[Fleasio] Replacement failed for ${url}, using original`, e);
+            return realFetch(input, init);
+        });
     };
 
     // --- XMLHttpRequest ---
@@ -125,7 +127,7 @@ function fleasioInitNetwork(state) {
                     xhr.dispatchEvent(new ProgressEvent("progress", {
                         lengthComputable: true, loaded: buf.byteLength, total: buf.byteLength,
                     }));
-                } catch (_) { /* ProgressEvent unavailable — not essential */ }
+                } catch (_) { /* ProgressEvent unavailable, not essential */ }
                 xhr.dispatchEvent(new Event("load"));
                 xhr.dispatchEvent(new Event("loadend"));
             },

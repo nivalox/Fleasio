@@ -1,8 +1,8 @@
-// AssetFetcher UI — loaded via @require by assetfetcher/assetfetcher.js.
+// AssetFetcher UI, loaded via @require by assetfetcher/assetfetcher.js.
 // Defines buildAssetFetcherUI(state, config, capture, maps).
 //
 // Same look and building blocks as Fleasio (src/ui/components.js + shell.js);
-// this file only describes what's special: the captured-maps list, selection,
+// this file only describes what's special: the captured-assets list, selection,
 // and the copy buttons.
 
 function buildAssetFetcherUI(state, config, capture, maps) {
@@ -68,8 +68,13 @@ function buildAssetFetcherUI(state, config, capture, maps) {
     let identify = null;          // set once the known-maps list has loaded
 
     const body = panel.content;
-    const heading = fleasioSectionLabel(body, "Captured maps");
-    body.appendChild(fleasioEl("div", "fl-hint", "Load a map in the game and it shows up here. Tap maps to select them, then copy."));
+    const heading = fleasioSectionLabel(body, "Captured assets");
+    body.appendChild(fleasioEl("div", "fl-hint", "Anything the game loads that matches your enabled asset types shows up here. Tap to select, then copy."));
+
+    // Type chips (All / Maps / Skins ...), only for kinds that have something captured.
+    const chipsEl = fleasioEl("div", "af-chips");
+    body.appendChild(chipsEl);
+    let typeView = "all"; // "all" | a type key | "other" (custom-word matches)
 
     const searchInput = fleasioEl("input", "fl-input af-search");
     searchInput.type = "search";
@@ -108,14 +113,44 @@ function buildAssetFetcherUI(state, config, capture, maps) {
         return d.toDateString() === new Date().toDateString() ? time : d.toLocaleDateString() + " " + time;
     }
 
+    // Memoised per entry: the classification never changes.
+    const kindOf = (entry) => {
+        if (entry._kind === undefined) {
+            const t = assetfetcherClassify(entry.name);
+            Object.defineProperty(entry, "_kind", { value: t ? t.key : "other", enumerable: false });
+        }
+        return entry._kind;
+    };
+
     function visibleEntries() {
         const term = search.trim().toLowerCase();
-        if (!term) return state.captured;
         return state.captured.filter(e => {
-            const info = identify ? identify(e) : null;
+            if (typeView !== "all" && kindOf(e) !== typeView) return false;
+            if (!term) return true;
+            const type = assetfetcherClassify(e.name);
+            const info = identify && kindOf(e) === "maps" ? identify(e) : null;
             return e.name.toLowerCase().includes(term)
                 || e.url.toLowerCase().includes(term)
+                || (type && type.label.toLowerCase().includes(term))
                 || (info && info.label.toLowerCase().includes(term));
+        });
+    }
+
+    function renderChips() {
+        const counts = { all: state.captured.length };
+        state.captured.forEach(e => { const k = kindOf(e); counts[k] = (counts[k] || 0) + 1; });
+        const kinds = ASSETFETCHER_TYPES.filter(t => counts[t.key]).map(t => ({ key: t.key, label: t.label }));
+        if (counts.other) kinds.push({ key: "other", label: "Other" });
+        if (typeView !== "all" && !counts[typeView]) typeView = "all"; // that kind is gone now
+
+        chipsEl.textContent = "";
+        // One chip would just repeat "All", so only show chips when there's a choice.
+        if (kinds.length < 2) return;
+        [{ key: "all", label: "All" }, ...kinds].forEach(k => {
+            const chip = fleasioEl("button", "af-chip" + (typeView === k.key ? " af-chip-on" : ""), `${k.label} ${counts[k.key]}`);
+            chip.type = "button";
+            chip.addEventListener("click", () => { typeView = k.key; render(); });
+            chipsEl.appendChild(chip);
         });
     }
 
@@ -125,12 +160,16 @@ function buildAssetFetcherUI(state, config, capture, maps) {
 
     function paintFooter() {
         const n = selectedEntries().length;
-        countEl.textContent = n ? `${n} selected` : "Tap maps above to select them";
+        countEl.textContent = n ? `${n} selected` : "Tap items above to select them";
         [copyNameBtn, copyUrlBtn, copyBothBtn].forEach(b => { b.disabled = n === 0; });
     }
 
+    // Maps are compared against the known-maps list (known / updated / new).
+    // Every other type just gets a label for what it is.
     function badgeFor(entry) {
-        if (!identify) return null;
+        const type = assetfetcherClassify(entry.name);
+        if (type && type.key !== "maps") return fleasioEl("span", "af-badge af-type", type.singular);
+        if (!type || !identify) return null;
         const info = identify(entry);
         const el = fleasioEl("span", "af-badge af-" + info.status);
         if (info.status === "known") el.textContent = info.label;
@@ -142,15 +181,18 @@ function buildAssetFetcherUI(state, config, capture, maps) {
     function render() {
         const all = state.captured;
         const shown = visibleEntries();
-        heading.textContent = all.length ? `Captured maps (${all.length})` : "Captured maps";
+        heading.textContent = all.length ? `Captured assets (${all.length})` : "Captured assets";
+        renderChips();
         listEl.textContent = "";
 
         if (!shown.length) {
             const empty = fleasioEl("div", "fl-empty");
             if (!all.length) {
                 empty.appendChild(fleasioEl("div", "fl-empty-title", "Nothing captured yet"));
-                empty.appendChild(fleasioEl("div", "fl-empty-sub",
-                    "Anything the game loads with “" + assetfetcherParseTerms(state.filter).join("”, “") + "” in its URL will appear here."));
+                const terms = assetfetcherActiveTerms(state);
+                empty.appendChild(fleasioEl("div", "fl-empty-sub", terms.length
+                    ? "Anything the game loads with “" + terms.join("”, “") + "” in its URL will appear here."
+                    : "Nothing is being detected. Turn an asset type on in Settings."));
             } else {
                 empty.appendChild(fleasioEl("div", "fl-empty-title", "No matches"));
             }
@@ -201,6 +243,15 @@ function buildAssetFetcherUI(state, config, capture, maps) {
         paintFooter();
     }
 
+    // Several captures can land in the same frame (one map load fires a few
+    // requests), so live updates are rendered at most once per frame.
+    let renderQueued = false;
+    function scheduleRender() {
+        if (renderQueued) return;
+        renderQueued = true;
+        requestAnimationFrame(() => { renderQueued = false; render(); });
+    }
+
     searchInput.addEventListener("input", () => { search = searchInput.value; render(); });
 
     selectAllBtn.addEventListener("click", () => { visibleEntries().forEach(e => selected.add(e.url)); render(); });
@@ -248,7 +299,8 @@ function buildAssetFetcherUI(state, config, capture, maps) {
             clearTimeout(pingTimer);
             pingTimer = setTimeout(() => fab.el.classList.remove("af-ping"), 1200);
         }
-        render();
+        // New captures are batched per frame; removals respond to a tap, so redraw at once.
+        if (entry) scheduleRender(); else render();
     });
 
     // Label known maps once Fleasio's map list is available (silently skipped if offline).
@@ -264,24 +316,34 @@ function buildAssetFetcherUI(state, config, capture, maps) {
     // ------------------------------------------------------------------
     const sBody = settingsOverlay.content;
 
-    fleasioSectionLabel(sBody, "Capture");
-    const filterInput = fleasioEl("input", "fl-input");
+    fleasioSectionLabel(sBody, "Detect");
+    ASSETFETCHER_TYPES.forEach((t) => {
+        sBody.appendChild(fleasioToggle(t.label, state.types[t.key], (on) => {
+            state.types[t.key] = on;
+            GM_setValue(config.TYPES_KEY, state.types);
+            render();
+        }));
+    });
+    sBody.appendChild(fleasioEl("div", "fl-hint", "Only maps are detected by default. New captures from the types you switch on appear in the list."));
+
+    const customLabel = fleasioEl("div", "fl-field-label", "Custom words (optional, comma-separated)");
+    sBody.appendChild(customLabel);
+    const filterInput = fleasioEl("input", "fl-input af-custom");
     filterInput.type = "text";
     filterInput.value = state.filter;
-    filterInput.placeholder = config.DEFAULT_FILTER;
+    filterInput.placeholder = "e.g. local_assets, sound";
     filterInput.autocomplete = "off";
     filterInput.autocapitalize = "off";
     filterInput.spellcheck = false;
     filterInput.addEventListener("change", () => {
-        const cleaned = assetfetcherParseTerms(filterInput.value).join(", ") || config.DEFAULT_FILTER;
+        const cleaned = assetfetcherParseTerms(filterInput.value).join(", ");
         state.filter = cleaned;
         filterInput.value = cleaned;
         GM_setValue(config.FILTER_KEY, cleaned);
         render();
     });
     sBody.appendChild(filterInput);
-    sBody.appendChild(fleasioEl("div", "fl-hint",
-        "Catches any request whose URL contains one of these words (comma-separated). Default: " + config.DEFAULT_FILTER));
+    sBody.appendChild(fleasioEl("div", "fl-hint", "Also catches any request whose URL contains one of these words."));
 
     fleasioBuildSettings(ctx, sBody, {
         fab,
@@ -301,6 +363,5 @@ function buildAssetFetcherUI(state, config, capture, maps) {
         settings: () => toggleOverlay(settingsOverlay),
     });
 
-    overlays.forEach(o => o.place());
     reflowAll();
 }

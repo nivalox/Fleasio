@@ -1,4 +1,4 @@
-// Fleasio — Statistics HUD: a small draggable label showing Ping, FPS, or both.
+// Fleasio: Statistics HUD, a small draggable label showing Ping, FPS, or both.
 //
 // Ping measures HTTP round-trip time to the veck.io domain as an approximation
 // of network latency (there's no access to the game's own networking, almost
@@ -70,7 +70,7 @@ function fleasioCreateStats(state, config) {
         fleasioClampToViewport(el);
         if (wantsPing()) {
             measurePing();
-            pingInterval = setInterval(measurePing, 2000);
+            pingInterval = setInterval(measurePing, 3000);
         }
         if (wantsFps()) {
             fpsFrameCount = 0;

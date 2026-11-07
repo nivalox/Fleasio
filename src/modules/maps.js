@@ -1,4 +1,4 @@
-// Fleasio — loads the map lists (game maps + Fleasio custom maps) used by the
+// Fleasio: loads the map lists (game maps + Fleasio custom maps) used by the
 // "🗺 browse" dropdowns. Each list is fetched once and cached; a failed fetch
 // is not cached, so the next tap retries.
 

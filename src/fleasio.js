@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fleasio
 // @namespace    fleasio-asset-replacer
-// @version      3.1
+// @version      3.5
 // @match        https://veck.io/*
 // @run-at       document-start
 // @grant        GM_xmlhttpRequest
@@ -26,9 +26,9 @@
 // ==/UserScript==
 
 // Fleasio entry point. Everything else lives in the @require'd files:
-//   src/modules/*  — features (asset replacement, ad block, stats, ...)
-//   src/ui/*       — interface (UI.js builds it from components.js + shell.js)
-//   src/css/*      — styling
+//   src/modules/*: features (asset replacement, ad block, stats, ...)
+//   src/ui/*: interface (UI.js builds it from components.js + shell.js)
+//   src/css/*: styling
 // @require'd files share this script's scope, hence the "fleasio*" names.
 
 (function () {
@@ -83,7 +83,7 @@
         if (typeof fleasioCreateFab !== "function") missing.push("ui/shell.js");
         if (typeof buildFleasioUI !== "function") missing.push("ui/UI.js");
         if (missing.length) {
-            console.error("[Fleasio] Failed to load: " + missing.join(", ") + " — check the @require URLs / network access.");
+            console.error("[Fleasio] Failed to load: " + missing.join(", ") + ". Check the @require URLs / network access.");
             return;
         }
         try {

@@ -1,4 +1,4 @@
-// Fleasio — keyboard shortcut helpers.
+// Fleasio: keyboard shortcut helpers.
 
 // Turns a KeyboardEvent.code into something readable for the Settings buttons.
 function fleasioCodeToLabel(code) {
@@ -16,13 +16,18 @@ function fleasioCodeToLabel(code) {
     if (map[code]) return map[code];
     if (code.startsWith("Key")) return code.slice(3);
     if (code.startsWith("Digit")) return code.slice(5);
-    return code; // F1–F12, arrows, numpad, etc. are already readable
+    return code; // F1-F12, arrows, numpad, etc. are already readable
 }
 
 // Global shortcut listener. `actions` = { main, quick, settings } callbacks.
 function fleasioInitKeybinds(state, actions) {
     window.addEventListener("keydown", (e) => {
         if (state.capturingKeybind || state.uiHidden || e.repeat) return;
+
+        // Cheap string checks first: most key presses belong to the game and
+        // shouldn't cost a DOM lookup.
+        const code = e.code;
+        if (code !== state.mainMenuKeybind && code !== state.quickMenuKeybind && code !== state.settingsMenuKeybind) return;
 
         const active = document.activeElement;
         const isTyping = active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA" || active.isContentEditable);

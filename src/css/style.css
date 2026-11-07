@@ -1,11 +1,11 @@
 /* ==========================================================================
-   Fleasio — styles
+   Fleasio: styles
    Every Fleasio element carries the .fl-ui class, which defines the design
    tokens below and resets the page's styles out of the way.
    ========================================================================== */
 
 .fl-ui {
-    --fl-bg: rgba(20, 21, 27, 0.94);
+    --fl-bg: rgba(20, 21, 27, 0.97);
     --fl-surface: rgba(255, 255, 255, 0.05);
     --fl-surface-hover: rgba(255, 255, 255, 0.10);
     --fl-field: rgba(0, 0, 0, 0.30);
@@ -85,8 +85,9 @@
     flex-direction: column;
     overflow: hidden;
     background: var(--fl-bg);
-    -webkit-backdrop-filter: blur(14px) saturate(140%);
-    backdrop-filter: blur(14px) saturate(140%);
+    /* No backdrop-filter: blurring a live game canvas every frame is expensive
+       and was a main source of lag on phones. */
+    contain: layout style;
     border: 1px solid var(--fl-border);
     border-radius: var(--fl-radius);
     box-shadow: 0 14px 36px rgba(0, 0, 0, 0.55);
@@ -107,15 +108,14 @@
     transform: none;
     transition-delay: 0s;
 }
+/* No !important: the open/close animation (Web Animations) has to be able to
+   override these while it runs. components.js sets left/top inline. */
 .fl-overlay.fl-fullscreen {
-    left: 0 !important;
-    top: 0 !important;
-    right: auto !important;
-    width: 100vw !important;
-    height: 100vh !important;
-    height: 100dvh !important;
-    max-height: none !important;
-    border-radius: 0 !important;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    max-height: none;
+    border-radius: 0;
 }
 
 .fl-header {

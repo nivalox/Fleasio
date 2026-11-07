@@ -1,4 +1,4 @@
-// AssetFetcher — copy text to the clipboard.
+// AssetFetcher: copy text to the clipboard.
 // Tries the userscript manager's GM_setClipboard first (works regardless of
 // page permissions), then the async Clipboard API, then the old textarea trick.
 

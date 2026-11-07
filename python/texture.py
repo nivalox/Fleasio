@@ -9,6 +9,12 @@ Usage:
     python texture.py                          # interactive menu
     python texture.py decompile <url> [dir]    # non-interactive
     python texture.py recompile <url> [dir]
+    python texture.py set-dir [dir]            # change the saved save directory
+
+The first time it runs, it asks which directory you'd like files saved to and
+remembers it (in ~/.fleasio/texture_config.json). Change it any time from the
+menu (option 3) or with `set-dir`. A directory given on the command line
+overrides the saved one for that run only.
 
 Special-cased asset types (extract on decompile / re-import on recompile):
     Texture2D  -> .png
@@ -21,7 +27,7 @@ AudioClip, and any other type UnityPy knows how to parse) is exported
 generically as a raw typetree dump: a .json file with every serialized
 field for that object, byte fields included (base64-encoded). Editing
 that JSON and running Recompile writes the fields straight back with
-obj.save_typetree() — no per-type reader/writer needed, and no
+obj.save_typetree(), so no per-type reader/writer is needed, and no
 Termux-unfriendly dependencies like fmod_toolkit are touched.
 """
 
@@ -51,6 +57,7 @@ from PIL import Image
 
 DEFAULT_DIR = "/storage/emulated/0/veck/"
 BUNDLE = "_temp.bundle"
+CONFIG_PATH = os.path.join(os.path.expanduser("~"), ".fleasio", "texture_config.json")
 
 UnityPy.config.FALLBACK_UNITY_VERSION = "2022.3.0f1"
 
@@ -78,7 +85,7 @@ def safe_name(s):
 def generic_filename(kind, name, path_id):
     # path_id is included because plenty of objects (GameObject, Sprite,
     # Material, AnimationClip...) reuse the same friendly name many times
-    # in one bundle — path_id is the only thing guaranteed unique.
+    # in one bundle. path_id is the only thing guaranteed unique.
     return f"{safe_name(kind)}__{safe_name(name)}__{path_id}.json"
 
 
@@ -144,7 +151,7 @@ def export_object(obj, save_dir):
     # Generic fallback: dump the raw typetree (every serialized field) as JSON.
     # Covers Sprite, GameObject, RectTransform, MonoBehaviour, Material,
     # Animator, AnimatorController, AnimationClip, CanvasRenderer, AudioClip,
-    # and anything else UnityPy can parse — no per-type code needed.
+    # and anything else UnityPy can parse, no per-type code needed.
     try:
         tree = obj.read_typetree()
         path = os.path.join(save_dir, generic_filename(kind, name, obj.path_id))
@@ -153,7 +160,7 @@ def export_object(obj, save_dir):
         print(f"[+] {kind} '{name}' -> {path}")
         return True
     except Exception as e:
-        print(f"[.] {kind} '{name}' — couldn't dump typetree, skipping ({e})")
+        print(f"[.] {kind} '{name}': couldn't dump typetree, skipping ({e})")
         return False
 
 
@@ -232,6 +239,62 @@ def import_object(obj, save_dir):
     return False
 
 
+# --- Saved preferences ---------------------------------------------------------
+
+def load_config():
+    try:
+        with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def save_config(cfg):
+    try:
+        os.makedirs(os.path.dirname(CONFIG_PATH), exist_ok=True)
+        with open(CONFIG_PATH, "w", encoding="utf-8") as f:
+            json.dump(cfg, f, indent=2)
+        return True
+    except OSError as e:
+        print(f"[-] Couldn't save your preference ({e}); it won't be remembered next time")
+        return False
+
+
+def saved_dir():
+    value = load_config().get("save_dir")
+    return value if isinstance(value, str) and value else None
+
+
+def ask_for_dir(current=None):
+    """Ask for a preferred save directory, create it, remember it, return it."""
+    default = current or DEFAULT_DIR
+    while True:
+        entered = input(f"Preferred save directory [{default}]: ").strip() or default
+        path = os.path.abspath(os.path.expanduser(entered))
+        try:
+            os.makedirs(path, exist_ok=True)
+        except OSError as e:
+            print(f"[-] Can't use that directory ({e}). Try another one.")
+            continue
+        cfg = load_config()
+        cfg["save_dir"] = path
+        if save_config(cfg):
+            print(f"[+] Save directory set to {path}")
+        return path
+
+
+def get_save_dir():
+    """The remembered directory. First run: ask for one (when there's a terminal)."""
+    path = saved_dir()
+    if path:
+        return path
+    if sys.stdin.isatty():
+        print("First run: let's pick where your files should be saved.")
+        return ask_for_dir()
+    return DEFAULT_DIR  # no terminal to ask on, and nothing remembered
+
+
 def download(url):
     print("[*] Downloading bundle...")
     subprocess.run(["curl", "-L", "-f", url, "-o", BUNDLE], check=True)
@@ -257,7 +320,8 @@ def decompile(url, save_dir):
     if not found_any:
         print("[-] Nothing was exported from this bundle")
     else:
-        print(f"[*] Done — files saved to {save_dir}")
+        print(f"[*] Done. Files saved to {save_dir}")
+    return found_any
 
 
 def recompile(url, save_dir):
@@ -273,8 +337,8 @@ def recompile(url, save_dir):
                 modified_any = True
 
         if not modified_any:
-            print("[-] Nothing was modified — no matching edited files found. Exiting.")
-            sys.exit(1)
+            print("[-] Nothing was modified: no matching edited files found.")
+            return False
 
         os.makedirs(save_dir, exist_ok=True)
         base = os.path.basename(url.split("?", 1)[0].split("#", 1)[0])
@@ -289,32 +353,72 @@ def recompile(url, save_dir):
             os.remove(BUNDLE)
 
     print(f"[+] Modified bundle saved: {out_path}")
+    return True
+
+
+def run_job(mode, url, save_dir):
+    """Run one decompile/recompile, reporting (not crashing on) download problems."""
+    try:
+        if mode == "decompile":
+            return decompile(url, save_dir)
+        return recompile(url, save_dir)
+    except subprocess.CalledProcessError:
+        print("[-] Download failed. Check the URL and your connection.")
+    except FileNotFoundError:
+        print("[-] curl isn't installed (needed to download bundles).")
+    return False
+
+
+def menu():
+    while True:
+        current = saved_dir() or DEFAULT_DIR
+        print("\n=== Unity Bundle Tool ===")
+        print(f"Save directory: {current}")
+        print("1) Decompile - extract assets from a bundle to files")
+        print("2) Recompile - repack edited files back into a bundle")
+        print("3) Change save directory")
+        print("4) Quit")
+        choice = input("Choose an option [1-4]: ").strip()
+
+        if choice in ("1", "2"):
+            url = input("Bundle URL: ").strip()
+            if not url:
+                print("[-] No URL given")
+                continue
+            run_job("decompile" if choice == "1" else "recompile", url, current)
+        elif choice == "3":
+            ask_for_dir(current)
+        elif choice in ("4", "q", "Q", ""):
+            return 0
+        else:
+            print("[-] Invalid choice")
 
 
 def main():
     args = sys.argv[1:]
 
+    if args and args[0].lower() in ("set-dir", "setdir", "dir"):
+        if len(args) > 1:
+            path = os.path.abspath(os.path.expanduser(args[1]))
+            os.makedirs(path, exist_ok=True)
+            cfg = load_config()
+            cfg["save_dir"] = path
+            save_config(cfg)
+            print(f"[+] Save directory set to {path}")
+        else:
+            ask_for_dir(saved_dir())
+        return 0
+
     if args and args[0].lower() in ("decompile", "recompile", "d", "r"):
         mode = "decompile" if args[0].lower().startswith("d") else "recompile"
         url = args[1] if len(args) > 1 else input("Bundle URL: ").strip()
-        save_dir = args[2] if len(args) > 2 else (input(f"Save directory [{DEFAULT_DIR}]: ").strip() or DEFAULT_DIR)
-    else:
-        print("=== Unity Bundle Tool ===")
-        print("1) Decompile - extract assets from a bundle to files")
-        print("2) Recompile - repack edited files back into a bundle")
-        choice = input("Choose an option [1/2]: ").strip()
-        mode = {"1": "decompile", "2": "recompile"}.get(choice)
-        if mode is None:
-            print("[-] Invalid choice")
-            sys.exit(1)
-        url = input("Bundle URL: ").strip()
-        save_dir = input(f"Save directory [{DEFAULT_DIR}]: ").strip() or DEFAULT_DIR
+        save_dir = args[2] if len(args) > 2 else get_save_dir()
+        return 0 if run_job(mode, url, save_dir) else 1
 
-    if mode == "decompile":
-        decompile(url, save_dir)
-    else:
-        recompile(url, save_dir)
+    # Interactive menu. Ask for a directory first if there isn't one yet.
+    get_save_dir()
+    return menu()
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

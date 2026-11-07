@@ -103,12 +103,12 @@ src/
     └── style.css         all styling
 
 assetfetcher/           AssetFetcher userscript (see below)
-├── assetfetcher.js     entry point — install this one
+├── assetfetcher.js     entry point (install this one)
 ├── modules/
-│   ├── capture.js        network capture (fetch, XHR, resource log)
+│   ├── capture.js        network capture + asset types (fetch, XHR, resource log)
 │   ├── identify.js       labels maps as known / updated / new
 │   └── clipboard.js      copy helper
-├── ui/UI.js            captured-maps list, selection, copy buttons
+├── ui/UI.js            captured-assets list, selection, copy buttons
 └── css/assetfetcher.css
 ```
 
@@ -117,14 +117,31 @@ assetfetcher/           AssetFetcher userscript (see below)
 
 🔎 AssetFetcher
 
-A second userscript that lives in this repo. It uses the same UI as Fleasio, but instead of replacing assets it **watches the game's network traffic** and lists every map bundle it loads (anything with `remote_scene` in the URL).
+A second userscript that lives in this repo. It uses the same UI as Fleasio, but instead of replacing assets it **watches the game's network traffic** and lists the assets it loads. Maps (`remote_scene`) are detected by default, and you can also switch on **skins** (`remote_assets_skin`), **backs** (`remote_assets_back`), **hats** (`remote_assets_hat`) and **faces** (`remote_assets_face`) in Settings.
 
 - Open the **A** icon (tap it, or press `\`), and every captured file is listed with its capture time
-- Files are labelled using `assets/assetURLS/maps.json`: **known** (shows the map name), **updated** (same map, new hash), or **new**
+- Maps are labelled using `assets/assetURLS/maps.json`: **known** (shows the map name), **updated** (same map, new hash), or **new**. Other types get a label for what they are, and filter chips appear once more than one type has been captured
 - Tap one or more maps to select them, then **Copy name**, **Copy URL**, or **Copy both**
 - A red counter on the icon shows how many maps were captured while the menu was closed
-- The captured list is saved between visits; Settings has the same icon opacity/size, menu height and shortcut options as Fleasio, plus an editable capture filter
+- The captured list is saved between visits; Settings has the same icon opacity/size, menu height and shortcut options as Fleasio, plus the asset types to detect and an optional list of custom words
 
 **Install:** `https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/assetfetcher/assetfetcher.js`
 
 AssetFetcher loads its shared code (`src/modules/*`, `src/ui/*`, `src/css/style.css`) straight from this repo, so keep those files in place.
+
+---
+
+🐍 Texture tool (`python/texture.py`)
+
+Decompiles a `.bundle` into editable files and recompiles your edits back into a bundle.
+
+- The first time you run it, it asks which directory you want your files saved to and remembers it
+- Run `python texture.py` for the menu: **1) Decompile**, **2) Recompile**, **3) Change save directory**, **4) Quit**
+- From the command line: `python texture.py decompile <url> [dir]`, `python texture.py recompile <url> [dir]`, or `python texture.py set-dir [dir]`
+- The saved directory lives in `~/.fleasio/texture_config.json`
+
+---
+
+🙏 Credits
+
+Fleasio was inspired by [Fleasion](https://github.com/fleasion/fleasion). Thank you to the Fleasion team!

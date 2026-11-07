@@ -1,4 +1,4 @@
-// Fleasio UI — loaded via @require by src/fleasio.js.
+// Fleasio UI, loaded via @require by src/fleasio.js.
 // Defines buildFleasioUI(state, config, save, modules).
 //
 // `state` is shared by reference with the network module, so changes made
@@ -63,7 +63,7 @@ function buildFleasioUI(state, config, save, modules) {
     const reflowAll = fleasioWireLayout(ctx, { fab, windows: overlays, extraEls: [stats.el] });
 
     // ------------------------------------------------------------------
-    // Main panel — replacements
+    // Main panel: replacements
     // ------------------------------------------------------------------
     const body = panel.content;
     const listHeading = fleasioSectionLabel(body, "Replacements");
@@ -149,7 +149,7 @@ function buildFleasioUI(state, config, save, modules) {
                     loading = false;
                     if (!open) return;
                     dropdown.textContent = "";
-                    dropdown.appendChild(fleasioEl("div", "fl-ac-empty", "Couldn’t load maps — check your connection"));
+                    dropdown.appendChild(fleasioEl("div", "fl-ac-empty", "Couldn’t load maps. Check your connection."));
                     dropdown.classList.add("fl-show");
                     return;
                 }
@@ -347,6 +347,5 @@ function buildFleasioUI(state, config, save, modules) {
         settings: () => toggleOverlay(settingsOverlay),
     });
 
-    overlays.forEach(o => o.place());
     reflowAll();
 }

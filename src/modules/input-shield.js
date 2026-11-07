@@ -1,9 +1,9 @@
-// Fleasio — stops the game's global input-blocking (touch, keyboard, wheel)
+// Fleasio: stops the game's global input-blocking (touch, keyboard, wheel)
 // from reaching our UI. Registered on window in the capture phase so it runs
 // before any listener the game attaches to document/canvas.
 //
 // NOTE: only touch / key / wheel events are shielded. Do NOT add pointer or
-// click events here — stopImmediatePropagation at window-capture would also
+// click events here: stopImmediatePropagation at window-capture would also
 // stop them reaching Fleasio's own handlers.
 //
 // Exception: while state.capturingKeybind is true (the user is pressing a key

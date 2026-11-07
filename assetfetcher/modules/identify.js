@@ -1,4 +1,4 @@
-// AssetFetcher — recognises captured bundles against the known game maps
+// AssetFetcher: recognises captured bundles against the known game maps
 // (Fleasio's assets/assetURLS/maps.json), so the list can say which map a
 // file is, and flag files that are new or updated versions.
 //

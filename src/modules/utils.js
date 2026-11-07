@@ -1,4 +1,4 @@
-// Fleasio — shared helpers (loaded via @require by src/fleasio.js).
+// Fleasio: shared helpers (loaded via @require by src/fleasio.js).
 // All @require'd files share one scope with the main script, so everything
 // here is a plain top-level function / var with a "fleasio" prefix.
 
@@ -60,16 +60,27 @@ function fleasioClampToViewport(el) {
     if (rect.width === 0 && rect.height === 0) return false; // hidden / not laid out
     const w = el.offsetWidth || rect.width;
     const h = el.offsetHeight || rect.height;
-    const left = fleasioClamp(rect.left, 0, Math.max(0, window.innerWidth - w));
-    const top = fleasioClamp(rect.top, 0, Math.max(0, window.innerHeight - h));
-    if (Math.abs(left - rect.left) < 0.5 && Math.abs(top - rect.top) < 0.5) return false;
+
+    // Prefer the position we set ourselves. getBoundingClientRect() includes
+    // CSS transforms, so while a window is mid open/close animation (scaled and
+    // shifted) it would report a slightly wrong spot and the clamp would then
+    // "correct" the window by a few pixels every time it opened.
+    const inlineLeft = parseFloat(el.style.left);
+    const inlineTop = parseFloat(el.style.top);
+    const hasInline = Number.isFinite(inlineLeft) && Number.isFinite(inlineTop);
+    const curLeft = hasInline ? inlineLeft : rect.left;
+    const curTop = hasInline ? inlineTop : rect.top;
+
+    const left = fleasioClamp(curLeft, 0, Math.max(0, window.innerWidth - w));
+    const top = fleasioClamp(curTop, 0, Math.max(0, window.innerHeight - h));
+    if (Math.abs(left - curLeft) < 0.5 && Math.abs(top - curTop) < 0.5) return false;
     el.style.left = left + "px";
     el.style.top = top + "px";
     el.style.right = "auto";
     return true;
 }
 
-// Fades an element out, then display:none — used by "Hide UI".
+// Fades an element out, then display:none (used by "Hide UI").
 function fleasioFadeOutThenHide(el, duration) {
     const prev = el.style.transition;
     el.style.transition = (prev ? prev + ", " : "") + `opacity ${duration}ms ease`;
@@ -83,14 +94,26 @@ function fleasioFadeOutThenHide(el, duration) {
 // leaves the handle, and ends cleanly on up / cancel / lost capture.
 function fleasioMakeDraggable({ handle, target, canDrag, ignore, onEnd }) {
     let drag = null;
+    let rafId = 0;
+    let pending = null;
     const THRESHOLD = 3;
+
+    // At most one style write per frame, however fast the pointer events arrive.
+    function flush() {
+        rafId = 0;
+        if (!pending) return;
+        target.style.left = pending.left + "px";
+        target.style.top = pending.top + "px";
+        target.style.right = "auto";
+        pending = null;
+    }
 
     handle.addEventListener("pointerdown", (e) => {
         if (!canDrag()) return;
         if (e.pointerType === "mouse" && e.button !== 0) return;
         if (ignore && e.target.closest && e.target.closest(ignore)) return;
         const r = target.getBoundingClientRect();
-        drag = { id: e.pointerId, sx: e.clientX, sy: e.clientY, x: r.left, y: r.top, moved: false };
+        drag = { id: e.pointerId, sx: e.clientX, sy: e.clientY, x: r.left, y: r.top, w: target.offsetWidth, h: target.offsetHeight, moved: false };
         try { handle.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
     });
 
@@ -100,16 +123,18 @@ function fleasioMakeDraggable({ handle, target, canDrag, ignore, onEnd }) {
         const dy = e.clientY - drag.sy;
         if (!drag.moved && Math.hypot(dx, dy) < THRESHOLD) return;
         drag.moved = true;
-        const w = target.offsetWidth, h = target.offsetHeight;
-        target.style.left = fleasioClamp(drag.x + dx, 0, Math.max(0, window.innerWidth - w)) + "px";
-        target.style.top = fleasioClamp(drag.y + dy, 0, Math.max(0, window.innerHeight - h)) + "px";
-        target.style.right = "auto";
+        pending = {
+            left: fleasioClamp(drag.x + dx, 0, Math.max(0, window.innerWidth - drag.w)),
+            top: fleasioClamp(drag.y + dy, 0, Math.max(0, window.innerHeight - drag.h)),
+        };
+        if (!rafId) rafId = requestAnimationFrame(flush);
     });
 
     const end = (e) => {
         if (!drag || (e.pointerId !== undefined && e.pointerId !== drag.id)) return;
         const wasMoved = drag.moved;
         drag = null;
+        if (rafId) { cancelAnimationFrame(rafId); flush(); } // land exactly where the pointer stopped
         if (wasMoved && onEnd) onEnd();
     };
     ["pointerup", "pointercancel", "lostpointercapture"].forEach(evt => handle.addEventListener(evt, end));

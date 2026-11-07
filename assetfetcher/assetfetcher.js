@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         AssetFetcher
 // @namespace    assetfetcher-veck
-// @version      1.0
-// @description  Watches veck.io's network traffic for map bundles (remote_scene…) and lets you copy their names / URLs.
+// @version      1.1
+// @description  Watches veck.io's network traffic for maps, skins, backs, hats and faces, and lets you copy their names / URLs.
 // @match        https://veck.io/*
 // @run-at       document-start
 // @grant        GM_xmlhttpRequest
@@ -42,7 +42,8 @@
 
     const config = {
         CAPTURED_KEY: "assetfetcher_captured",
-        FILTER_KEY: "assetfetcher_filter",
+        FILTER_KEY: "assetfetcher_filter",   // custom words
+        TYPES_KEY: "assetfetcher_types",     // which asset types to detect
         POSITIONS_KEY: "assetfetcher_positions",
         MAINMENU_KEY_STORAGE: "assetfetcher_mainmenu_key",
         QUICKMENU_KEY_STORAGE: "assetfetcher_quickmenu_key", // unused, but the shared state loader reads it
@@ -55,7 +56,6 @@
         DEFAULT_PANEL_HEIGHT: 70,
         DEFAULT_MAINMENU_KEY: "Backslash", // Fleasio uses Right Shift / Right Ctrl, so they never clash
         DEFAULT_QUICKMENU_KEY: null,
-        DEFAULT_FILTER: "remote_scene",
         MAX_CAPTURED: 300,
         MAPS_JSON_URL: RAW + "assets/assetURLS/maps.json",
         FLEASIO_MAPS_JSON_URL: RAW + "assets/assetURLS/fleasiomaps.json",
@@ -68,9 +68,17 @@
             : [];
     }
 
+    // Custom words. (Older versions stored their one "remote_scene" word here;
+    // maps are now a built-in type, so that old default is dropped.)
+    function loadCustomWords() {
+        const saved = String(GM_getValue(config.FILTER_KEY, "") || "").trim();
+        return saved.toLowerCase() === "remote_scene" ? "" : saved;
+    }
+
     const state = Object.assign(fleasioLoadCommonState(config), {
         captured: loadCaptured(),
-        filter: GM_getValue(config.FILTER_KEY, config.DEFAULT_FILTER) || config.DEFAULT_FILTER,
+        types: assetfetcherNormalizeTypes(GM_getValue(config.TYPES_KEY, null)),
+        filter: loadCustomWords(),
     });
 
     // --- Must start immediately (document-start), or early loads are missed ---
@@ -88,7 +96,7 @@
         if (typeof assetfetcherCopy !== "function") missing.push("assetfetcher/modules/clipboard.js");
         if (typeof buildAssetFetcherUI !== "function") missing.push("assetfetcher/ui/UI.js");
         if (missing.length) {
-            console.error("[AssetFetcher] Failed to load: " + missing.join(", ") + " — check the @require URLs / network access.");
+            console.error("[AssetFetcher] Failed to load: " + missing.join(", ") + ". Check the @require URLs / network access.");
             return;
         }
         try {

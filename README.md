@@ -97,7 +97,34 @@ src/
 │   └── stats.js          ping / FPS HUD
 ├── ui/
 │   ├── components.js     switches, sliders, keybind pickers, windows
-│   └── UI.js             builds the interface from those pieces
+│   ├── shell.js          shared icon + Settings sections (also used by AssetFetcher)
+│   └── UI.js             builds Fleasio's interface from those pieces
 └── css/
     └── style.css         all styling
+
+assetfetcher/           AssetFetcher userscript (see below)
+├── assetfetcher.js     entry point — install this one
+├── modules/
+│   ├── capture.js        network capture (fetch, XHR, resource log)
+│   ├── identify.js       labels maps as known / updated / new
+│   └── clipboard.js      copy helper
+├── ui/UI.js            captured-maps list, selection, copy buttons
+└── css/assetfetcher.css
 ```
+
+
+---
+
+🔎 AssetFetcher
+
+A second userscript that lives in this repo. It uses the same UI as Fleasio, but instead of replacing assets it **watches the game's network traffic** and lists every map bundle it loads (anything with `remote_scene` in the URL).
+
+- Open the **A** icon (tap it, or press `\`), and every captured file is listed with its capture time
+- Files are labelled using `assets/assetURLS/maps.json`: **known** (shows the map name), **updated** (same map, new hash), or **new**
+- Tap one or more maps to select them, then **Copy name**, **Copy URL**, or **Copy both**
+- A red counter on the icon shows how many maps were captured while the menu was closed
+- The captured list is saved between visits; Settings has the same icon opacity/size, menu height and shortcut options as Fleasio, plus an editable capture filter
+
+**Install:** `https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/assetfetcher/assetfetcher.js`
+
+AssetFetcher loads its shared code (`src/modules/*`, `src/ui/*`, `src/css/style.css`) straight from this repo, so keep those files in place.

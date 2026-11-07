@@ -184,18 +184,20 @@ function fleasioStatsToggle(initialMode, initialEnabled, onToggleChange, onModeC
 // close) + scrolling body. Position is remembered under `positionKey` once the
 // user drags it; until then `placement(overlay)` decides where it sits.
 //
+// ctx: { state, config, brand?: { name, letter }, themeClass?: string }
 // opts: { id, subtitle, width, positionKey, headerActions, placement, fromButton }
 function fleasioCreateOverlay(ctx, opts) {
     const { state, config } = ctx;
-    const el = fleasioEl("div", "fl-ui fl-overlay" + (opts.fromButton ? " fl-from-btn" : ""));
+    const brand = ctx.brand || { name: "Fleasio", letter: "F" };
+    const el = fleasioEl("div", "fl-ui fl-overlay" + (opts.fromButton ? " fl-from-btn" : "") + (ctx.themeClass ? " " + ctx.themeClass : ""));
     el.id = opts.id;
     el.style.setProperty("--fl-w", (opts.width || 300) + "px");
 
     const header = fleasioEl("div", "fl-header");
     const title = fleasioEl("div", "fl-title");
-    title.appendChild(fleasioEl("div", "fl-logo", "F"));
+    title.appendChild(fleasioEl("div", "fl-logo", brand.letter));
     const names = fleasioEl("div", "fl-names");
-    names.appendChild(fleasioEl("div", "fl-name", "Fleasio"));
+    names.appendChild(fleasioEl("div", "fl-name", brand.name));
     names.appendChild(fleasioEl("div", "fl-sub", opts.subtitle || ""));
     title.appendChild(names);
     header.appendChild(title);

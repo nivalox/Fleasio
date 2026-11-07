@@ -1,0 +1,108 @@
+/* ==========================================================================
+   AssetFetcher — styles on top of Fleasio's shared stylesheet
+   (src/css/style.css). Only what's specific to AssetFetcher lives here.
+   ========================================================================== */
+
+/* Teal theme: every colour in the shared stylesheet comes from these tokens. */
+.fl-ui.fl-theme-teal {
+    --fl-accent: #14b8a6;
+    --fl-accent-2: #38bdf8;
+    --fl-accent-alt: #22d3ee;
+    --fl-accent-rgb: 20, 184, 166;
+}
+
+/* ---------- Icon badge ---------- */
+
+.af-badge-dot {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    background: #ef4444;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    box-shadow: 0 0 0 2px rgba(20, 21, 27, 0.9);
+    pointer-events: none;
+}
+.af-badge-dot.af-show { display: flex; }
+.fl-fab.af-ping { animation: af-ping 0.9s ease; }
+
+/* ---------- Panel ---------- */
+
+.af-search { width: 100%; flex: none; margin-bottom: 8px; }
+.af-toolbar { display: flex; gap: 6px; margin-bottom: 10px; }
+.af-toolbar .fl-button { flex: 1; padding: 7px 8px; font-size: 12px; }
+
+.af-item { cursor: pointer; padding-left: 10px; }
+.af-item:hover { background: var(--fl-surface-hover); }
+.af-item.af-selected {
+    border-color: var(--fl-accent);
+    background: rgba(var(--fl-accent-rgb), 0.14);
+}
+.af-item .fl-item-title {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    font-size: 12px;
+}
+.af-sub { margin-top: 3px; white-space: normal; }
+
+.af-check {
+    flex: none;
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid var(--fl-dim);
+    border-radius: 7px;
+    color: transparent;
+    font-size: 13px;
+    font-weight: 700;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.af-selected .af-check { background: var(--fl-accent); border-color: var(--fl-accent); color: #fff; }
+
+.af-badge {
+    display: inline-block;
+    margin-right: 6px;
+    padding: 1px 7px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+}
+.af-known { background: rgba(34, 197, 94, 0.18); color: #4ade80; }
+.af-updated { background: rgba(251, 191, 36, 0.18); color: #fbbf24; }
+.af-new { background: rgba(244, 114, 182, 0.18); color: #f472b6; }
+
+/* ---------- Footer (copy buttons) ---------- */
+
+.af-footer {
+    flex: none;
+    padding: 10px 12px;
+    border-top: 1px solid var(--fl-border);
+    background: rgba(0, 0, 0, 0.25);
+}
+.af-count { margin-bottom: 6px; font-size: 11px; color: var(--fl-dim); }
+.af-footer-buttons { display: flex; gap: 6px; }
+.af-footer-buttons .fl-button { flex: 1; padding: 9px 6px; font-size: 12px; white-space: nowrap; }
+.fl-button:disabled { opacity: 0.4; cursor: default; filter: none; transform: none; }
+.fl-button.af-flash { background: #16a34a; border-color: #16a34a; }
+
+@media (pointer: coarse) {
+    .af-footer-buttons .fl-button { padding: 13px 6px; }
+    .af-toolbar .fl-button { padding: 11px 8px; }
+}
+
+@keyframes af-ping {
+    0% { transform: scale(1); }
+    30% { transform: scale(1.25); }
+    100% { transform: scale(1); }
+}

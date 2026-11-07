@@ -5,7 +5,8 @@
 // here (adding a replacement, flipping ad-block, ...) take effect immediately.
 // `modules` = { adblock, maps } from src/modules/.
 //
-// Building blocks live in src/ui/components.js, all styling in src/css/style.css.
+// Building blocks live in src/ui/components.js, the shared icon/settings shell in
+// src/ui/shell.js, all styling in src/css/style.css.
 
 function buildFleasioUI(state, config, save, modules) {
     'use strict';
@@ -15,59 +16,40 @@ function buildFleasioUI(state, config, save, modules) {
     const version = (typeof GM_info !== "undefined" && GM_info.script) ? GM_info.script.version : "";
 
     // ------------------------------------------------------------------
-    // Floating icon
+    // Floating icon (shared: ui/shell.js)
+    //   PC:    click = main menu (shortcut keys also work)
+    //   Touch: tap = main menu, double-tap = quick toggles
+    //   Move UI on: drag the icon anywhere
     // ------------------------------------------------------------------
-    const btn = fleasioEl("div", "fl-ui fl-fab", "F");
-    btn.id = "fleasio-btn";
-    btn.setAttribute("role", "button");
-    btn.setAttribute("aria-label", "Fleasio menu");
-    btn.title = "Fleasio";
-    fleasioRestorePosition(state, "btn", btn);
-    document.documentElement.appendChild(btn);
-
-    // Opacity + size are CSS variables, so the stylesheet owns the look
-    // (and :hover / :active can still bring a faint icon back to full opacity).
-    function applyIconAppearance() {
-        btn.style.setProperty("--fl-icon-opacity", String(state.iconOpacity / 100));
-        btn.style.setProperty("--fl-icon-size", state.iconSize + "px");
-    }
-    applyIconAppearance();
+    let panel = null, quickMenu = null, settingsOverlay = null;
+    const fab = fleasioCreateFab(ctx, {
+        id: "fleasio-btn",
+        letter: "F",
+        label: "Fleasio menu",
+        title: "Fleasio",
+        onTap: () => toggleOverlay(panel),
+        onDoubleTap: () => toggleOverlay(quickMenu),
+        onMoved: () => panel.reflow(),
+    });
 
     // ------------------------------------------------------------------
     // Windows
     // ------------------------------------------------------------------
-    function placePanel(el) {
-        const r = btn.getBoundingClientRect();
-        const w = el.offsetWidth || 300;
-        const h = el.offsetHeight || 400;
-        const left = fleasioClamp(r.right - w, 8, Math.max(8, window.innerWidth - w - 8));
-        let top = r.bottom + 8;
-        if (top + h > window.innerHeight - 8) top = Math.max(8, r.top - 8 - h); // flip above the icon
-        el.style.left = left + "px";
-        el.style.top = top + "px";
-        el.style.right = "auto";
-    }
-
-    let settingsOverlay = null; // assigned below; the panel's ⚙ action needs it
-    const panel = fleasioCreateOverlay(ctx, {
+    panel = fleasioCreateOverlay(ctx, {
         id: "fleasio-panel",
         subtitle: "Asset Replacer" + (version ? " · v" + version : ""),
         width: 320,
         positionKey: "panel",
         fromButton: true,
-        placement: placePanel,
+        placement: fleasioPlaceNearFab(fab.el),
         headerActions: [{
             icon: "⚙", title: "Settings",
-            onClick: () => { if (settingsOverlay) toggleOverlay(settingsOverlay); },
+            onClick: () => toggleOverlay(settingsOverlay),
         }],
     });
-    // Max height of the main menu, as a % of the screen (CSS var read by .fl-overlay).
-    function applyPanelHeight() {
-        panel.el.style.setProperty("--fl-max-h", String(state.panelHeight));
-    }
-    applyPanelHeight();
+    fleasioApplyPanelHeight(panel, state);
 
-    const quickMenu = fleasioCreateOverlay(ctx, { id: "fleasio-quickmenu", subtitle: "Quick Toggles", width: 250, positionKey: "quick" });
+    quickMenu = fleasioCreateOverlay(ctx, { id: "fleasio-quickmenu", subtitle: "Quick Toggles", width: 250, positionKey: "quick" });
     settingsOverlay = fleasioCreateOverlay(ctx, { id: "fleasio-settingsmenu", subtitle: "Settings", width: 290, positionKey: "settings" });
     const overlays = [panel, quickMenu, settingsOverlay];
 
@@ -78,6 +60,7 @@ function buildFleasioUI(state, config, save, modules) {
     }
 
     const stats = fleasioCreateStats(state, config);
+    const reflowAll = fleasioWireLayout(ctx, { fab, windows: overlays, extraEls: [stats.el] });
 
     // ------------------------------------------------------------------
     // Main panel — replacements
@@ -340,176 +323,30 @@ function buildFleasioUI(state, config, save, modules) {
     if (state.statsEnabled) stats.start();
 
     // ------------------------------------------------------------------
-    // Settings
+    // Settings (icon, menu height, move/hide UI, shortcuts, reset: ui/shell.js)
     // ------------------------------------------------------------------
-    const sBody = settingsOverlay.content;
-
-    fleasioSectionLabel(sBody, "Icon");
-    const opacitySlider = fleasioSlider({
-        label: "Opacity", min: 15, max: 100, step: 5, value: state.iconOpacity, unit: "%",
-        onInput: (v) => { state.iconOpacity = v; applyIconAppearance(); },
-        onChange: (v) => GM_setValue(config.ICON_OPACITY_KEY, v),
-    });
-    const sizeSlider = fleasioSlider({
-        label: "Size", min: 28, max: 80, step: 2, value: state.iconSize, unit: "px",
-        onInput: (v) => { state.iconSize = v; applyIconAppearance(); },
-        onChange: (v) => {
-            GM_setValue(config.ICON_SIZE_KEY, v);
-            reflowAll();
-        },
-    });
-    sBody.appendChild(opacitySlider.el);
-    sBody.appendChild(sizeSlider.el);
-    sBody.appendChild(fleasioEl("div", "fl-hint", "A faint icon turns solid while hovered or pressed."));
-    sBody.appendChild(fleasioButton("Reset icon", "secondary", () => {
-        state.iconOpacity = config.DEFAULT_ICON_OPACITY;
-        state.iconSize = config.DEFAULT_ICON_SIZE;
-        opacitySlider.set(state.iconOpacity);
-        sizeSlider.set(state.iconSize);
-        GM_setValue(config.ICON_OPACITY_KEY, state.iconOpacity);
-        GM_setValue(config.ICON_SIZE_KEY, state.iconSize);
-        applyIconAppearance();
-        reflowAll();
-    }));
-
-    fleasioSectionLabel(sBody, "Main menu");
-    const heightSlider = fleasioSlider({
-        label: "Max height", min: 40, max: 95, step: 5, value: state.panelHeight, unit: "%",
-        onInput: (v) => { state.panelHeight = v; applyPanelHeight(); panel.reflow(); },
-        onChange: (v) => { GM_setValue(config.PANEL_HEIGHT_KEY, v); reflowAll(); },
-    });
-    sBody.appendChild(heightSlider.el);
-    sBody.appendChild(fleasioEl("div", "fl-hint", "Taller shows more replacements and map results at once."));
-    sBody.appendChild(fleasioButton("Reset height", "secondary", () => {
-        state.panelHeight = config.DEFAULT_PANEL_HEIGHT;
-        heightSlider.set(state.panelHeight);
-        GM_setValue(config.PANEL_HEIGHT_KEY, state.panelHeight);
-        applyPanelHeight();
-        reflowAll();
-    }));
-
-    fleasioSectionLabel(sBody, "Interface");
-    function setMoveMode(on) {
-        state.moveMode = on;
-        btn.classList.toggle("fl-move-on", on);
-        overlays.forEach(o => o.setMovable(on));
-        stats.setMovable(on);
-    }
-    sBody.appendChild(fleasioToggle("Move UI", false, setMoveMode));
-    sBody.appendChild(fleasioToggle("Hide UI (until refresh)", false, (on) => {
-        if (!on) return;
-        state.uiHidden = true;
-        setMoveMode(false);
-        overlays.forEach(o => o.close());
-        [btn, panel.el, quickMenu.el, settingsOverlay.el, stats.el].forEach(el => fleasioFadeOutThenHide(el, 250));
-        stats.stopTimers();
-    }));
-
-    fleasioSectionLabel(sBody, "Shortcuts");
-    sBody.appendChild(fleasioKeybindPicker(state, "Main menu", state.mainMenuKeybind, (code) => {
-        state.mainMenuKeybind = code;
-        GM_setValue(config.MAINMENU_KEY_STORAGE, code);
-    }));
-    sBody.appendChild(fleasioKeybindPicker(state, "Quick toggles", state.quickMenuKeybind, (code) => {
-        state.quickMenuKeybind = code;
-        GM_setValue(config.QUICKMENU_KEY_STORAGE, code);
-    }));
-    sBody.appendChild(fleasioKeybindPicker(state, "Settings", state.settingsMenuKeybind, (code) => {
-        state.settingsMenuKeybind = code;
-        GM_setValue(config.SETTINGSMENU_KEY_STORAGE, code);
-    }));
-
-    fleasioSectionLabel(sBody, "Reset");
-    sBody.appendChild(fleasioButton("Reset GUI positions", "danger", () => {
-        state.positions = {};
-        GM_setValue(config.POSITIONS_KEY, {});
-        location.reload();
-    }));
-
-    // ------------------------------------------------------------------
-    // Icon interaction
-    //   PC:    click = main menu (shortcut keys also work)
-    //   Touch: tap = main menu, double-tap = quick toggles
-    //   Move UI on: drag the icon anywhere
-    // ------------------------------------------------------------------
-    const DOUBLE_TAP_MS = 280;
-    let tapTimer = null;
-    let btnDrag = null;
-
-    btn.addEventListener("pointerdown", (e) => {
-        if (e.pointerType === "mouse" && e.button !== 0) return;
-        btn.classList.add("fl-pressed");
-        const r = btn.getBoundingClientRect();
-        btnDrag = { id: e.pointerId, sx: e.clientX, sy: e.clientY, x: r.left, y: r.top, moved: false };
-        try { btn.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
+    fleasioBuildSettings(ctx, settingsOverlay.content, {
+        fab,
+        panel,
+        windows: overlays,
+        reflowAll,
+        movables: [stats],
+        extraEls: [stats.el],
+        onHide: () => stats.stopTimers(),
+        heightHint: "Taller shows more replacements and map results at once.",
+        keybinds: [
+            { label: "Main menu", stateKey: "mainMenuKeybind", configKey: "MAINMENU_KEY_STORAGE" },
+            { label: "Quick toggles", stateKey: "quickMenuKeybind", configKey: "QUICKMENU_KEY_STORAGE" },
+            { label: "Settings", stateKey: "settingsMenuKeybind", configKey: "SETTINGSMENU_KEY_STORAGE" },
+        ],
     });
 
-    btn.addEventListener("pointermove", (e) => {
-        if (!btnDrag || e.pointerId !== btnDrag.id || !state.moveMode) return;
-        const dx = e.clientX - btnDrag.sx, dy = e.clientY - btnDrag.sy;
-        if (!btnDrag.moved && Math.hypot(dx, dy) < 4) return;
-        btnDrag.moved = true;
-        btn.style.left = fleasioClamp(btnDrag.x + dx, 0, Math.max(0, window.innerWidth - btn.offsetWidth)) + "px";
-        btn.style.top = fleasioClamp(btnDrag.y + dy, 0, Math.max(0, window.innerHeight - btn.offsetHeight)) + "px";
-        btn.style.right = "auto";
-    });
-
-    function endBtnPointer(e, cancelled) {
-        if (!btnDrag || e.pointerId !== btnDrag.id) return;
-        const drag = btnDrag;
-        btnDrag = null;
-        btn.classList.remove("fl-pressed");
-        if (drag.moved) {
-            fleasioRememberPosition(state, config, "btn", btn);
-            panel.reflow();
-            return;
-        }
-        if (cancelled || state.moveMode || state.uiHidden) return;
-
-        if (e.pointerType === "touch") {
-            if (tapTimer) {
-                clearTimeout(tapTimer);
-                tapTimer = null;
-                toggleOverlay(quickMenu);
-            } else {
-                tapTimer = setTimeout(() => {
-                    tapTimer = null;
-                    toggleOverlay(panel);
-                }, DOUBLE_TAP_MS);
-            }
-        } else {
-            toggleOverlay(panel);
-        }
-    }
-    btn.addEventListener("pointerup", (e) => endBtnPointer(e, false));
-    btn.addEventListener("pointercancel", (e) => endBtnPointer(e, true));
-
-    // ------------------------------------------------------------------
-    // Keyboard shortcuts + layout
-    // ------------------------------------------------------------------
     fleasioInitKeybinds(state, {
         main: () => toggleOverlay(panel),
         quick: () => toggleOverlay(quickMenu),
         settings: () => toggleOverlay(settingsOverlay),
     });
 
-    function reflowAll() {
-        if (fleasioClampToViewport(btn) && state.positions.btn) {
-            fleasioRememberPosition(state, config, "btn", btn);
-        }
-        overlays.forEach(o => o.reflow());
-        fleasioClampToViewport(stats.el);
-    }
-    // The on-screen keyboard resizes the viewport on some mobile browsers.
-    // Re-seating windows while someone is typing makes them jump around, so
-    // wait until the field loses focus (the keyboard closing fires resize again).
-    function isTypingInUI() {
-        const a = document.activeElement;
-        return !!(a && a.tagName === "INPUT" && fleasioIsInsideUI(a));
-    }
-    window.addEventListener("resize", () => { if (!isTypingInUI()) reflowAll(); });
-    window.addEventListener("orientationchange", () => setTimeout(reflowAll, 200));
-
-    [panel, quickMenu, settingsOverlay].forEach(o => o.place());
+    overlays.forEach(o => o.place());
     reflowAll();
 }

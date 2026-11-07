@@ -14,6 +14,8 @@
     --fl-dim: rgba(236, 236, 241, 0.55);
     --fl-accent: #6366f1;
     --fl-accent-2: #ec4899;
+    --fl-accent-alt: #7c5cf6;
+    --fl-accent-rgb: 99, 102, 241;
     --fl-danger: #f87171;
     --fl-radius: 14px;
 
@@ -64,7 +66,7 @@
 .fl-fab:hover,
 .fl-fab.fl-pressed,
 .fl-fab.fl-move-on { opacity: 1; }
-.fl-fab:hover { box-shadow: 0 4px 14px rgba(99, 102, 241, 0.55); }
+.fl-fab:hover { box-shadow: 0 4px 14px rgba(var(--fl-accent-rgb), 0.55); }
 .fl-fab.fl-pressed { transform: scale(0.88); }
 .fl-fab.fl-move-on {
     cursor: move;
@@ -223,7 +225,7 @@
 }
 .fl-button:hover { filter: brightness(1.12); }
 .fl-button:active { transform: scale(0.97); }
-.fl-button-primary { background: linear-gradient(135deg, var(--fl-accent), #7c5cf6); }
+.fl-button-primary { background: linear-gradient(135deg, var(--fl-accent), var(--fl-accent-alt)); }
 .fl-button-secondary { background: var(--fl-surface-hover); border-color: var(--fl-border); }
 .fl-button-danger { background: rgba(248, 113, 113, 0.16); border-color: rgba(248, 113, 113, 0.4); color: var(--fl-danger); }
 .fl-body > .fl-button { width: 100%; margin-bottom: 4px; }
@@ -255,7 +257,7 @@
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 .fl-input::placeholder { color: var(--fl-dim); }
-.fl-input:focus { border-color: var(--fl-accent); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25); }
+.fl-input:focus { border-color: var(--fl-accent); box-shadow: 0 0 0 3px rgba(var(--fl-accent-rgb), 0.25); }
 .fl-input.fl-invalid { border-color: var(--fl-danger); animation: fl-shake 0.3s; }
 .fl-browse { width: 38px; height: 36px; background: var(--fl-field); border: 1px solid var(--fl-border); opacity: 1; }
 
@@ -393,7 +395,7 @@
     background: #fff;
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.55);
 }
-.fl-slider:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.45); }
+.fl-slider:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 4px rgba(var(--fl-accent-rgb), 0.45); }
 
 .fl-keybind {
     appearance: none;
@@ -496,6 +498,6 @@
     75% { transform: translateX(4px); }
 }
 @keyframes fl-pulse {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.55); }
-    50% { box-shadow: 0 0 0 6px rgba(99, 102, 241, 0); }
+    0%, 100% { box-shadow: 0 0 0 0 rgba(var(--fl-accent-rgb), 0.55); }
+    50% { box-shadow: 0 0 0 6px rgba(var(--fl-accent-rgb), 0); }
 }

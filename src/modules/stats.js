@@ -10,7 +10,7 @@
 function fleasioCreateStats(state, config) {
     const el = document.createElement("div");
     el.id = "fleasio-stats";
-    el.className = "fl-ui fl-stats";
+    el.className = "fl-ui fl-stats" + (state.noAnimations ? " fl-no-anim" : "");
     el.textContent = "Ping: --ms";
 
     if (!fleasioRestorePosition(state, "stats", el) && !fleasioRestorePosition(state, "ping", el)) {

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AssetFetcher
 // @namespace    assetfetcher-veck
-// @version      1.1
+// @version      1.2
 // @description  Watches veck.io's network traffic for maps, skins, backs, hats and faces, and lets you copy their names / URLs.
 // @match        https://veck.io/*
 // @run-at       document-start
@@ -14,18 +14,18 @@
 // @grant        GM_info
 // @grant        unsafeWindow
 // @connect      raw.githubusercontent.com
-// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/modules/utils.js?v=2.8
-// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/modules/input-shield.js?v=2.8
-// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/modules/keybinds.js?v=2.8
-// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/modules/maps.js?v=2.8
-// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/ui/components.js?v=2.8
-// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/ui/shell.js?v=2.8
-// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/assetfetcher/modules/capture.js?v=1.0
-// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/assetfetcher/modules/identify.js?v=1.0
-// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/assetfetcher/modules/clipboard.js?v=1.0
-// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/assetfetcher/ui/UI.js?v=1.0
-// @resource     fleasioCSS https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/css/style.css?v=2.8
-// @resource     assetfetcherCSS https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/assetfetcher/css/assetfetcher.css?v=1.0
+// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/modules/utils.js?v=4.0
+// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/modules/input-shield.js?v=4.0
+// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/modules/keybinds.js?v=4.0
+// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/modules/maps.js?v=4.0
+// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/ui/components.js?v=4.0
+// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/ui/shell.js?v=4.0
+// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/assetfetcher/modules/capture.js?v=1.2
+// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/assetfetcher/modules/identify.js?v=1.2
+// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/assetfetcher/modules/clipboard.js?v=1.2
+// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/assetfetcher/ui/UI.js?v=1.2
+// @resource     fleasioCSS https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/css/style.css?v=4.0
+// @resource     assetfetcherCSS https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/assetfetcher/css/assetfetcher.css?v=1.2
 // ==/UserScript==
 
 // AssetFetcher entry point. Part of the Fleasio repo: it reuses Fleasio's
@@ -51,6 +51,8 @@
         ICON_OPACITY_KEY: "assetfetcher_icon_opacity",
         ICON_SIZE_KEY: "assetfetcher_icon_size",
         PANEL_HEIGHT_KEY: "assetfetcher_panel_height",
+        SIZES_KEY: "assetfetcher_sizes",
+        NO_ANIM_KEY: "assetfetcher_no_animations",
         DEFAULT_ICON_OPACITY: 100,
         DEFAULT_ICON_SIZE: 40,
         DEFAULT_PANEL_HEIGHT: 70,

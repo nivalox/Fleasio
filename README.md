@@ -78,7 +78,7 @@ Press Install.
 | Quick Toggles | Right Ctrl | Double-tap the icon |
 | Settings | ⚙ in the main menu (or bind a key) | ⚙ in the main menu |
 
-Settings lets you change the **icon opacity** and **icon size**, move or hide the UI, and rebind the shortcuts.
+All the windows (main menu, quick toggles, settings) can be open at the same time. Settings lets you change the **icon opacity** and **icon size**, the main menu's **max height**, **move** or **stretch** any window to whatever size you like, turn **animations off**, hide the UI, and rebind the shortcuts.
 
 ---
 
@@ -92,6 +92,7 @@ src/
 │   ├── adblock.js        ad banner removal
 │   ├── input-shield.js   keeps the game from swallowing touch/keys on the UI
 │   ├── network.js        fetch/XHR asset replacement
+│   ├── localfiles.js     storage for bundle files uploaded from your device
 │   ├── maps.js           map list loading for the browse dropdowns
 │   ├── keybinds.js       shortcut handling
 │   └── stats.js          ping / FPS HUD
@@ -128,6 +129,12 @@ A second userscript that lives in this repo. It uses the same UI as Fleasio, but
 **Install:** `https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/assetfetcher/assetfetcher.js`
 
 AssetFetcher loads its shared code (`src/modules/*`, `src/ui/*`, `src/css/style.css`) straight from this repo, so keep those files in place.
+
+---
+
+📁 Using your own bundle file
+
+In the main menu, tap the **📁** button next to the Replacement field, pick a `.bundle` file from your device, then tap **Add**. The game will load your file instead of the original. Uploaded files are kept in your browser's site storage for veck.io, so clearing site data removes them.
 
 ---
 

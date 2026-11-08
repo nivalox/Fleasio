@@ -12,20 +12,32 @@ function fleasioInitNetwork(state) {
         return entry ? entry.replacement : null;
     }
 
-    function fetchLocal(localUrl) {
+    function fetchRemote(url) {
         return new Promise((resolve, reject) => {
             GM_xmlhttpRequest({
                 method: "GET",
-                url: localUrl,
+                url,
                 responseType: "arraybuffer",
                 onload: (res) => {
                     if (res.status >= 200 && res.status < 300 && res.response) resolve(res.response);
-                    else reject(new Error(`HTTP ${res.status} for ${localUrl}`));
+                    else reject(new Error(`HTTP ${res.status} for ${url}`));
                 },
                 onerror: reject,
                 ontimeout: reject,
             });
         });
+    }
+
+    // Gets the replacement's bytes: from IndexedDB for an uploaded file
+    // ("local:<id>"), otherwise by downloading the URL.
+    function loadReplacement(replacement) {
+        if (fleasioIsLocalReplacement(replacement)) {
+            return fleasioFileGet(replacement.slice(FLEASIO_LOCAL_PREFIX.length)).then((buf) => {
+                if (!buf) throw new Error("the uploaded file is missing (site data cleared?)");
+                return buf;
+            });
+        }
+        return fetchRemote(replacement);
     }
 
     // --- fetch ---
@@ -40,7 +52,7 @@ function fleasioInitNetwork(state) {
         const method = (init && init.method) || (input && typeof input === "object" && input.method) || "GET";
         console.log(`[Fleasio] Intercepted fetch: ${url}`);
 
-        return fetchLocal(localUrl).then((buf) => new Response(
+        return loadReplacement(localUrl).then((buf) => new Response(
             method.toUpperCase() === "HEAD" ? null : buf,
             {
                 status: 200,
@@ -96,43 +108,34 @@ function fleasioInitNetwork(state) {
             realSend.apply(xhr, args);
         };
 
-        GM_xmlhttpRequest({
-            method: "GET",
-            url: localUrl,
-            responseType: "arraybuffer",
-            onload: (res) => {
-                if (!(res.status >= 200 && res.status < 300 && res.response)) {
-                    return fallBack(`HTTP ${res.status}`);
-                }
-                const buf = res.response;
-                const isHead = !!xhr._interceptMethod && xhr._interceptMethod.toUpperCase() === "HEAD";
-                const shaped = shapeResponse(xhr, buf, isHead);
+        // Two-argument then(): only a failure to LOAD the replacement falls back
+        // to the original request, never an error while delivering it.
+        loadReplacement(localUrl).then((buf) => {
+            const isHead = !!xhr._interceptMethod && xhr._interceptMethod.toUpperCase() === "HEAD";
+            const shaped = shapeResponse(xhr, buf, isHead);
 
-                const define = (name, value) =>
-                    Object.defineProperty(xhr, name, { value, configurable: true });
-                define("readyState", 4);
-                define("status", 200);
-                define("statusText", "OK");
-                define("response", shaped.response);
-                if ("responseText" in shaped) define("responseText", shaped.responseText);
-                define("responseURL", xhr._interceptUrl);
+            const define = (name, value) =>
+                Object.defineProperty(xhr, name, { value, configurable: true });
+            define("readyState", 4);
+            define("status", 200);
+            define("statusText", "OK");
+            define("response", shaped.response);
+            if ("responseText" in shaped) define("responseText", shaped.responseText);
+            define("responseURL", xhr._interceptUrl);
 
-                xhr.getAllResponseHeaders = () =>
-                    `content-type: application/octet-stream\r\ncontent-length: ${buf.byteLength}\r\n`;
-                xhr.getResponseHeader = (name) =>
-                    name.toLowerCase() === "content-length" ? String(buf.byteLength) : null;
+            xhr.getAllResponseHeaders = () =>
+                `content-type: application/octet-stream\r\ncontent-length: ${buf.byteLength}\r\n`;
+            xhr.getResponseHeader = (name) =>
+                name.toLowerCase() === "content-length" ? String(buf.byteLength) : null;
 
-                xhr.dispatchEvent(new Event("readystatechange"));
-                try {
-                    xhr.dispatchEvent(new ProgressEvent("progress", {
-                        lengthComputable: true, loaded: buf.byteLength, total: buf.byteLength,
-                    }));
-                } catch (_) { /* ProgressEvent unavailable, not essential */ }
-                xhr.dispatchEvent(new Event("load"));
-                xhr.dispatchEvent(new Event("loadend"));
-            },
-            onerror: () => fallBack("network error"),
-            ontimeout: () => fallBack("timeout"),
-        });
+            xhr.dispatchEvent(new Event("readystatechange"));
+            try {
+                xhr.dispatchEvent(new ProgressEvent("progress", {
+                    lengthComputable: true, loaded: buf.byteLength, total: buf.byteLength,
+                }));
+            } catch (_) { /* ProgressEvent unavailable, not essential */ }
+            xhr.dispatchEvent(new Event("load"));
+            xhr.dispatchEvent(new Event("loadend"));
+        }, (e) => fallBack(e && e.message ? e.message : "load failed"));
     };
 }

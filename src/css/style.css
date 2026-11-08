@@ -77,8 +77,9 @@
 
 .fl-overlay {
     position: fixed;
-    z-index: 2147483647;
+    z-index: 2147483000; /* raised per window by fleasioRaise(); the icon stays above all of them */
     width: min(var(--fl-w, 300px), calc(100vw - 16px));
+    max-width: calc(100vw - 8px);
     max-height: calc(var(--fl-max-h, 70) * 1vh);
     max-height: calc(var(--fl-max-h, 70) * 1dvh);
     display: flex;
@@ -112,11 +113,38 @@
    override these while it runs. components.js sets left/top inline. */
 .fl-overlay.fl-fullscreen {
     width: 100vw;
+    max-width: none;
     height: 100vh;
     height: 100dvh;
     max-height: none;
     border-radius: 0;
 }
+
+/* ---------- Stretch grip (Settings > Stretch UI) ---------- */
+
+.fl-grip {
+    display: none;
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    z-index: 20;
+    width: 26px;
+    height: 26px;
+    cursor: nwse-resize;
+    touch-action: none;
+    background: repeating-linear-gradient(135deg, transparent 0 4px, rgba(255, 255, 255, 0.6) 4px 6px);
+    clip-path: polygon(100% 0, 100% 100%, 0 100%);
+    border-bottom-right-radius: var(--fl-radius);
+}
+.fl-overlay.fl-stretchable .fl-grip { display: block; }
+.fl-overlay.fl-stretchable { outline: 2px dashed rgba(var(--fl-accent-rgb), 0.7); outline-offset: -2px; }
+.fl-overlay.fl-fullscreen .fl-grip { display: none; }
+
+/* ---------- Upload status + replacement file button ---------- */
+
+.fl-status { margin: 6px 0 0; font-size: 11px; color: var(--fl-dim); }
+.fl-status.fl-error { color: var(--fl-danger); }
+.fl-status.fl-good { color: #4ade80; }
 
 .fl-header {
     flex: none;
@@ -463,6 +491,7 @@
 /* ---------- Touch / small screens ---------- */
 
 @media (pointer: coarse) {
+    .fl-grip { width: 34px; height: 34px; }
     .fl-icon-btn { width: 38px; height: 38px; font-size: 17px; }
     .fl-browse { width: 44px; height: 44px; }
     .fl-input { font-size: 16px; padding: 11px 10px; } /* 16px stops iOS zooming on focus */
@@ -480,6 +509,15 @@
 
 @media (max-width: 480px) {
     .fl-body { padding: 12px; }
+}
+
+/* Settings > No animations: switches off every transition and animation. */
+.fl-ui.fl-no-anim,
+.fl-ui.fl-no-anim *,
+.fl-ui.fl-no-anim *::before,
+.fl-ui.fl-no-anim *::after {
+    animation: none !important;
+    transition: none !important;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -50,9 +50,11 @@ function buildAssetFetcherUI(state, config, capture, maps) {
         onToggle: (open) => { if (open) { unseen = 0; paintBadge(); } },
     });
     fleasioApplyPanelHeight(panel, state);
-    settingsOverlay = fleasioCreateOverlay(ctx, { id: "assetfetcher-settings", subtitle: "Settings", width: 290, positionKey: "settings" });
+    settingsOverlay = fleasioCreateOverlay(ctx, { id: "assetfetcher-settings", subtitle: "Settings", width: 290, positionKey: "settings", offset: { dx: -40, dy: 30 } });
     const overlays = [panel, settingsOverlay];
 
+    // Windows are independent: both can be open at once, and each can be moved
+    // or stretched on its own.
     function toggleOverlay(ov) {
         if (state.uiHidden) return;
         ov.toggle();

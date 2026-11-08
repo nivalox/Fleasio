@@ -185,11 +185,16 @@ function fleasioStatsToggle(initialMode, initialEnabled, onToggleChange, onModeC
 // user drags it; until then `placement(overlay)` decides where it sits.
 //
 // ctx: { state, config, brand?: { name, letter }, themeClass?: string }
-// opts: { id, subtitle, width, positionKey, headerActions, placement, fromButton }
+// opts: { id, subtitle, width, positionKey, headerActions, placement, fromButton,
+//         offset?: { dx, dy } (nudges the default centred spot so windows opened
+//         together don't stack exactly on top of each other) }
 function fleasioCreateOverlay(ctx, opts) {
     const { state, config } = ctx;
     const brand = ctx.brand || { name: "Fleasio", letter: "F" };
-    const el = fleasioEl("div", "fl-ui fl-overlay" + (opts.fromButton ? " fl-from-btn" : "") + (ctx.themeClass ? " " + ctx.themeClass : ""));
+    const el = fleasioEl("div", "fl-ui fl-overlay"
+        + (opts.fromButton ? " fl-from-btn" : "")
+        + (ctx.themeClass ? " " + ctx.themeClass : "")
+        + (state.noAnimations ? " fl-no-anim" : ""));
     el.id = opts.id;
     el.style.setProperty("--fl-w", (opts.width || 300) + "px");
 
@@ -226,11 +231,28 @@ function fleasioCreateOverlay(ctx, opts) {
     const body = fleasioEl("div", "fl-body");
     el.appendChild(header);
     el.appendChild(body);
+    // Resize grip (only visible while "Stretch UI" is on).
+    const grip = fleasioEl("div", "fl-grip");
+    grip.title = "Drag to resize";
+    el.appendChild(grip);
     document.documentElement.appendChild(el);
+
+    const MIN_W = 200, MIN_H = 120;
+    let hasCustomSize = false;
+    function applySize(w, h) {
+        el.style.width = w + "px";
+        el.style.height = h + "px";
+        el.style.maxHeight = "none"; // a stretched window ignores the "Max height" setting
+        hasCustomSize = true;
+    }
+    const savedSize = state.sizes && state.sizes[opts.positionKey];
+    if (savedSize && Number.isFinite(savedSize.w) && Number.isFinite(savedSize.h)) {
+        applySize(Math.max(MIN_W, savedSize.w), Math.max(MIN_H, savedSize.h));
+    }
 
     let isOpen = false;
     let isFullscreen = false;
-    let savedInline = null;   // left/top/right to restore after fullscreen
+    let savedInline = null;   // left/top/right (and any stretched size) to restore after fullscreen
     let hideTimer = null;
     let moved = fleasioRestorePosition(state, opts.positionKey, el);
 
@@ -244,8 +266,10 @@ function fleasioCreateOverlay(ctx, opts) {
         } else {
             // Default: centred in the viewport.
             const w = el.offsetWidth, h = el.offsetHeight;
-            el.style.left = Math.max(8, (window.innerWidth - w) / 2) + "px";
-            el.style.top = Math.max(8, (window.innerHeight - h) / 2) + "px";
+            const dx = (opts.offset && opts.offset.dx) || 0;
+            const dy = (opts.offset && opts.offset.dy) || 0;
+            el.style.left = fleasioClamp((window.innerWidth - w) / 2 + dx, 8, Math.max(8, window.innerWidth - w - 8)) + "px";
+            el.style.top = fleasioClamp((window.innerHeight - h) / 2 + dy, 8, Math.max(8, window.innerHeight - h - 8)) + "px";
             el.style.right = "auto";
         }
     }
@@ -258,12 +282,13 @@ function fleasioCreateOverlay(ctx, opts) {
             place();
             if (!isFullscreen) fleasioClampToViewport(el);
             if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+            fleasioRaise(el);           // newest window on top
             void el.offsetWidth;        // lay it out closed first so the open transition runs
             el.classList.add("fl-open");
         } else {
             el.classList.remove("fl-open");
             // Wait for the fade-out, then take it out of the layout entirely.
-            hideTimer = setTimeout(() => { if (!isOpen) el.style.display = "none"; }, 220);
+            hideTimer = setTimeout(() => { if (!isOpen) el.style.display = "none"; }, state.noAnimations ? 0 : 220);
         }
         if (opts.onToggle) opts.onToggle(open);
     }
@@ -273,7 +298,7 @@ function fleasioCreateOverlay(ctx, opts) {
     // is crisp (no stretched text, unlike a scale transform) and cheap for a
     // single small element.
     function animateBetween(from, to, entering) {
-        if (!el.animate) return;
+        if (!el.animate || state.noAnimations) return;
         if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
         const radius = parseFloat(getComputedStyle(el).getPropertyValue("--fl-radius")) || 14;
         const frame = (r, br) => ({
@@ -293,18 +318,32 @@ function fleasioCreateOverlay(ctx, opts) {
 
         isFullscreen = on;
         if (on) {
-            savedInline = { left: el.style.left, top: el.style.top, right: el.style.right };
+            savedInline = {
+                left: el.style.left, top: el.style.top, right: el.style.right,
+                width: el.style.width, height: el.style.height, maxHeight: el.style.maxHeight,
+            };
             el.style.left = "0px";
             el.style.top = "0px";
             el.style.right = "auto";
+            el.style.width = "";      // let the fullscreen class decide the size
+            el.style.height = "";
+            el.style.maxHeight = "";
         } else if (savedInline) {
             el.style.left = savedInline.left;
             el.style.top = savedInline.top;
             el.style.right = savedInline.right;
+            el.style.width = savedInline.width;
+            el.style.height = savedInline.height;
+            el.style.maxHeight = savedInline.maxHeight;
             savedInline = null;
         }
         el.classList.toggle("fl-fullscreen", on);
         fsBtn.classList.toggle("fl-active", on);
+        // A fullscreen window must sit above the floating icon (which would
+        // otherwise cover its top-right header buttons). Same z-index as the
+        // icon, and windows come later in the page, so they win.
+        if (on) el.style.zIndex = "2147483647";
+        else fleasioRaise(el);
         if (!on) {
             place();
             fleasioClampToViewport(el);
@@ -326,6 +365,53 @@ function fleasioCreateOverlay(ctx, opts) {
         },
     });
 
+    // Clicking or tapping anywhere on a window brings it to the front.
+    el.addEventListener("pointerdown", () => { if (!isFullscreen) fleasioRaise(el); }, true);
+
+    // ---- stretching: drag the corner grip to set any size you like ----
+    let resize = null;
+    let resizeRaf = 0;
+    let resizePending = null;
+    function flushResize() {
+        resizeRaf = 0;
+        if (!resizePending) return;
+        applySize(resizePending.w, resizePending.h);
+        resizePending = null;
+    }
+    grip.addEventListener("pointerdown", (e) => {
+        if (!state.stretchMode || isFullscreen) return;
+        if (e.pointerType === "mouse" && e.button !== 0) return;
+        const left = parseFloat(el.style.left);
+        const top = parseFloat(el.style.top);
+        const r = el.getBoundingClientRect();
+        resize = {
+            id: e.pointerId, sx: e.clientX, sy: e.clientY,
+            w: el.offsetWidth, h: el.offsetHeight,
+            left: Number.isFinite(left) ? left : r.left,
+            top: Number.isFinite(top) ? top : r.top,
+        };
+        try { grip.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
+        e.preventDefault();
+    });
+    grip.addEventListener("pointermove", (e) => {
+        if (!resize || e.pointerId !== resize.id) return;
+        resizePending = {
+            w: fleasioClamp(resize.w + e.clientX - resize.sx, MIN_W, Math.max(MIN_W, window.innerWidth - resize.left)),
+            h: fleasioClamp(resize.h + e.clientY - resize.sy, MIN_H, Math.max(MIN_H, window.innerHeight - resize.top)),
+        };
+        if (!resizeRaf) resizeRaf = requestAnimationFrame(flushResize);
+    });
+    const endResize = (e) => {
+        if (!resize || (e.pointerId !== undefined && e.pointerId !== resize.id)) return;
+        resize = null;
+        if (resizeRaf) { cancelAnimationFrame(resizeRaf); flushResize(); }
+        if (hasCustomSize) {
+            state.sizes[opts.positionKey] = { w: el.offsetWidth, h: el.offsetHeight };
+            GM_setValue(config.SIZES_KEY, state.sizes);
+        }
+    };
+    ["pointerup", "pointercancel", "lostpointercapture"].forEach(evt => grip.addEventListener(evt, endResize));
+
     return {
         el,
         content: body,
@@ -336,10 +422,25 @@ function fleasioCreateOverlay(ctx, opts) {
         toggle: () => setOpen(!isOpen),
         place,
         setMovable(on) { header.classList.toggle("fl-movable", on); },
+        setStretchable(on) { el.classList.toggle("fl-stretchable", on); },
+        // Back to the automatic size (and forget the stretched one).
+        resetSize() {
+            el.style.width = "";
+            el.style.height = "";
+            el.style.maxHeight = "";
+            hasCustomSize = false;
+            if (state.sizes) delete state.sizes[opts.positionKey];
+            if (isOpen && !isFullscreen) { place(); fleasioClampToViewport(el); }
+        },
         // Re-seat after a viewport change. Unmoved windows re-run placement,
         // moved ones are just pulled back on-screen.
         reflow() {
             if (isFullscreen || !isOpen) return; // closed windows are re-placed when they open
+            if (hasCustomSize) {
+                // A stretched window must still fit after a rotation / smaller viewport.
+                if (el.offsetWidth > window.innerWidth - 8) el.style.width = Math.max(MIN_W, window.innerWidth - 8) + "px";
+                if (el.offsetHeight > window.innerHeight - 8) el.style.height = Math.max(MIN_H, window.innerHeight - 8) + "px";
+            }
             place();
             if (fleasioClampToViewport(el) && moved) {
                 fleasioRememberPosition(state, config, opts.positionKey, el);

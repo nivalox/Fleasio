@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fleasio
 // @namespace    fleasio-asset-replacer
-// @version      3.5
+// @version      4.0
 // @match        https://veck.io/*
 // @run-at       document-start
 // @grant        GM_xmlhttpRequest
@@ -12,17 +12,18 @@
 // @grant        GM_info
 // @grant        unsafeWindow
 // @connect      *
-// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/modules/utils.js?v=2.8
-// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/modules/adblock.js?v=2.8
-// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/modules/input-shield.js?v=2.8
-// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/modules/network.js?v=2.8
-// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/modules/maps.js?v=2.8
-// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/modules/keybinds.js?v=2.8
-// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/modules/stats.js?v=2.8
-// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/ui/components.js?v=2.8
-// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/ui/shell.js?v=2.8
-// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/ui/UI.js?v=2.8
-// @resource     fleasioCSS https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/css/style.css?v=2.8
+// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/modules/utils.js?v=4.0
+// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/modules/adblock.js?v=4.0
+// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/modules/input-shield.js?v=4.0
+// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/modules/localfiles.js?v=4.0
+// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/modules/network.js?v=4.0
+// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/modules/maps.js?v=4.0
+// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/modules/keybinds.js?v=4.0
+// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/modules/stats.js?v=4.0
+// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/ui/components.js?v=4.0
+// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/ui/shell.js?v=4.0
+// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/ui/UI.js?v=4.0
+// @resource     fleasioCSS https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/css/style.css?v=4.0
 // ==/UserScript==
 
 // Fleasio entry point. Everything else lives in the @require'd files:
@@ -45,6 +46,8 @@
         STATS_MODE_KEY: "veck_stats_mode",
         ICON_OPACITY_KEY: "veck_icon_opacity",
         ICON_SIZE_KEY: "veck_icon_size",
+        SIZES_KEY: "veck_sizes",
+        NO_ANIM_KEY: "veck_no_animations",
         PANEL_HEIGHT_KEY: "veck_panel_height",
         DEFAULT_ICON_OPACITY: 100,
         DEFAULT_ICON_SIZE: 40,
@@ -81,6 +84,7 @@
         if (typeof fleasioInitKeybinds !== "function") missing.push("modules/keybinds.js");
         if (typeof fleasioCreateOverlay !== "function") missing.push("ui/components.js");
         if (typeof fleasioCreateFab !== "function") missing.push("ui/shell.js");
+        if (typeof fleasioFilePut !== "function") missing.push("modules/localfiles.js");
         if (typeof buildFleasioUI !== "function") missing.push("ui/UI.js");
         if (missing.length) {
             console.error("[Fleasio] Failed to load: " + missing.join(", ") + ". Check the @require URLs / network access.");

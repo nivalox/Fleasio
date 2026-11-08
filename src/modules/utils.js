@@ -22,6 +22,23 @@ function fleasioUrlToString(input) {
     }
 }
 
+// "2.4 MB", "813 KB", ...
+function fleasioFormatSize(bytes) {
+    if (!Number.isFinite(bytes) || bytes < 0) return "";
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return Math.round(bytes / 1024) + " KB";
+    return (bytes / (1024 * 1024)).toFixed(bytes < 10 * 1024 * 1024 ? 1 : 0) + " MB";
+}
+
+// Window stacking: every window starts at the same z-index, and "raising" one
+// gives it the next number up, so the one you touched last sits on top.
+// Stays below the floating icon, which is always on top.
+var fleasioTopZ = 2147483000;
+function fleasioRaise(el) {
+    if (fleasioTopZ < 2147483600) fleasioTopZ++;
+    el.style.zIndex = String(fleasioTopZ);
+}
+
 function fleasioClamp(n, min, max) {
     return Math.min(Math.max(n, min), max);
 }

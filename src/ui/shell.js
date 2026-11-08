@@ -16,7 +16,10 @@ function fleasioLoadCommonState(config) {
         iconOpacity: fleasioStoredNumber(config.ICON_OPACITY_KEY, config.DEFAULT_ICON_OPACITY, 15, 100),
         iconSize: fleasioStoredNumber(config.ICON_SIZE_KEY, config.DEFAULT_ICON_SIZE, 28, 80),
         panelHeight: fleasioStoredNumber(config.PANEL_HEIGHT_KEY, config.DEFAULT_PANEL_HEIGHT, 40, 95),
+        sizes: GM_getValue(config.SIZES_KEY, {}) || {},      // stretched window sizes
+        noAnimations: !!GM_getValue(config.NO_ANIM_KEY, false),
         moveMode: false,
+        stretchMode: false,
         uiHidden: false,
         capturingKeybind: false,
     };
@@ -55,12 +58,15 @@ function fleasioPlaceNearFab(fabEl) {
 //   Touch: tap = onTap; if onDoubleTap is given, a double-tap = onDoubleTap
 //          (onTap is then delayed ~280ms to tell them apart; without
 //          onDoubleTap it fires instantly)
-//   Move UI on: drag it anywhere (position remembered under "btn").
+//   Move UI on: drag it anywhere (position remembered under "btn"); a plain tap
+//               still opens the menu.
 // opts: { id, letter, label, title, defaultTop, onTap, onDoubleTap, onMoved }
 // returns { el, applyAppearance, setMoveMode }
 function fleasioCreateFab(ctx, opts) {
     const { state, config } = ctx;
-    const el = fleasioEl("div", "fl-ui fl-fab" + (ctx.themeClass ? " " + ctx.themeClass : ""), opts.letter || "F");
+    const el = fleasioEl("div", "fl-ui fl-fab"
+        + (ctx.themeClass ? " " + ctx.themeClass : "")
+        + (state.noAnimations ? " fl-no-anim" : ""), opts.letter || "F");
     el.id = opts.id;
     el.setAttribute("role", "button");
     el.setAttribute("aria-label", opts.label || "Menu");
@@ -108,7 +114,9 @@ function fleasioCreateFab(ctx, opts) {
             if (opts.onMoved) opts.onMoved();
             return;
         }
-        if (cancelled || state.moveMode || state.uiHidden) return;
+        // A tap (no drag) always opens the menu, even with Move UI on. Otherwise
+        // closing every window while moving things would leave no way back in.
+        if (cancelled || state.uiHidden) return;
 
         if (e.pointerType === "touch" && opts.onDoubleTap) {
             if (tapTimer) {
@@ -170,7 +178,8 @@ function fleasioWireLayout(ctx, opts) {
 }
 
 // Adds the standard Settings sections to `body`:
-//   Icon (opacity, size) · Main menu (max height) · Interface (move / hide UI)
+//   Icon (opacity, size) · Main menu (max height) · Interface (move, stretch,
+//   no animations, hide UI)
 //   · Shortcuts · Reset
 // o: {
 //   fab, panel, windows,                    // required
@@ -233,12 +242,31 @@ function fleasioBuildSettings(ctx, body, o) {
         (o.movables || []).forEach(m => m.setMovable(on));
     }
     body.appendChild(fleasioToggle("Move UI", false, setMoveMode));
+
+    // Every top-level Fleasio element, so settings can reach them all.
+    const allEls = () => [o.fab.el, ...o.windows.map(w => w.el), ...(o.extraEls || [])];
+
+    body.appendChild(fleasioToggle("Stretch UI (resize windows)", false, (on) => {
+        state.stretchMode = on;
+        o.windows.forEach(w => w.setStretchable(on));
+    }));
+    body.appendChild(fleasioEl("div", "fl-hint", "Drag the corner grip of any window to make it whatever size you like."));
+
+    body.appendChild(fleasioToggle("No animations", state.noAnimations, (on) => {
+        state.noAnimations = on;
+        GM_setValue(config.NO_ANIM_KEY, on);
+        allEls().forEach(el => el.classList.toggle("fl-no-anim", on));
+    }));
+    // Apply the saved choice to elements created before this point.
+    if (state.noAnimations) allEls().forEach(el => el.classList.add("fl-no-anim"));
+
     body.appendChild(fleasioToggle("Hide UI (until refresh)", false, (on) => {
         if (!on) return;
         state.uiHidden = true;
         setMoveMode(false);
-        o.windows.forEach(w => w.close());
-        [o.fab.el, ...o.windows.map(w => w.el), ...(o.extraEls || [])].forEach(el => fleasioFadeOutThenHide(el, 250));
+        state.stretchMode = false;
+        o.windows.forEach(w => { w.setStretchable(false); w.close(); });
+        allEls().forEach(el => fleasioFadeOutThenHide(el, state.noAnimations ? 0 : 250));
         if (o.onHide) o.onHide();
     }));
 
@@ -251,6 +279,11 @@ function fleasioBuildSettings(ctx, body, o) {
     });
 
     fleasioSectionLabel(body, "Reset");
+    body.appendChild(fleasioButton("Reset window sizes", "secondary", () => {
+        state.sizes = {};
+        GM_setValue(config.SIZES_KEY, {});
+        o.windows.forEach(w => w.resetSize());
+    }));
     body.appendChild(fleasioButton("Reset GUI positions", "danger", () => {
         state.positions = {};
         GM_setValue(config.POSITIONS_KEY, {});

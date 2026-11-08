@@ -126,8 +126,10 @@ A second userscript that lives in this repo. It uses the same UI as Fleasio, but
 - A red counter on the icon shows how many maps were captured while the menu was closed
 - The captured list is saved between visits; Settings has the same icon opacity/size, menu height and shortcut options as Fleasio, plus the asset types to detect and an optional list of custom words
 
-**Install:** ```
-https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/assetfetcher/assetfetcher.js```
+**Install:**
+```
+https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/assetfetcher/assetfetcher.js
+```
 
 AssetFetcher loads its shared code (`src/modules/*`, `src/ui/*`, `src/css/style.css`) straight from this repo, so keep those files in place.
 

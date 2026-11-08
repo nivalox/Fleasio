@@ -1,7 +1,7 @@
 {
   "Non-Game Maps": {
     "Match Making": {
-      "URL": "https://veck.io/StreamingAssets/aa0.0.2464/WebGL/local_assets_matchmakepanel_b63ad18faec1cf986ff3db9ce6712930.bundle"
+      "URL": "https://veck.io/StreamingAssets/aa0.0.2482/WebGL/local_assets_matchmakepanel_b4cd876f0da7fc2eb5a0bd7f03456775.bundle"
     },
     "Map Selector": {
       "URL": "https://files.veck.io/static/0_0_2482/remote_scenes_-1_2c29e47b6232d1e22943afe7abcfb597.bundle"
@@ -41,7 +41,7 @@
       "URL": "https://files.veck.io/static/0_0_2464/remote_scenes_14_53e092a4b7658a19d8e8e6ba1733679d.bundle"
     },
     "Station": {
-      "URL": "https://files.veck.io/static/0_0_2464/remote_scenes_25_d43b0ce4c189fbadf96810a48e7dfcd3.bundle"
+      "URL": "httphttps://files.veck.io/static/0_0_2482/remote_scenes_25_28dba9f680d91ec22b620fcebf85eedf.bundle"
     },
     "Vertigo": {
       "URL": "https://files.veck.io/static/0_0_2464/remote_scenes_27_9381b11bdc818c43c9b936e70e83e70f.bundle"

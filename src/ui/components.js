@@ -180,6 +180,34 @@ function fleasioStatsToggle(initialMode, initialEnabled, onToggleChange, onModeC
     return row;
 }
 
+// A Quick Toggles row with a switch and a ⚙ that expands a panel of options
+// right underneath it (the panel is empty: the caller fills `panel`).
+// opts: { label, enabled, onToggle(on), gearTitle }
+// returns { el, panel }
+function fleasioOptionsRow(opts) {
+    const wrap = fleasioEl("div", "fl-options");
+
+    const row = fleasioEl("div", "fl-row");
+    row.appendChild(fleasioEl("span", "fl-row-label", opts.label));
+    const controls = fleasioEl("div", "fl-row-controls");
+    const gear = fleasioEl("button", "fl-icon-btn", "⚙");
+    gear.type = "button";
+    gear.title = opts.gearTitle || "Options";
+    gear.setAttribute("aria-label", opts.gearTitle || "Options");
+    controls.appendChild(gear);
+    controls.appendChild(fleasioSwitch(opts.enabled, (on) => opts.onToggle(on)));
+    row.appendChild(controls);
+    wrap.appendChild(row);
+
+    const panel = fleasioEl("div", "fl-subpanel");
+    wrap.appendChild(panel);
+    gear.addEventListener("click", () => {
+        gear.classList.toggle("fl-active", panel.classList.toggle("fl-show"));
+    });
+
+    return { el: wrap, panel };
+}
+
 // FPS limit row for the Quick Toggles menu: label with the current value, a
 // gear that opens the presets / custom field, and the on/off switch.
 // opts: { enabled, target (0 = unlimited), getRefreshHz(), measureRefresh(),

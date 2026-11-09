@@ -10,8 +10,9 @@
 // never blocked, so the game receives them exactly as before. Presses made on
 // Fleasio's own windows, or while typing in a text box, aren't shown.
 //
-// Settings read from `state`: keysEnabled, keysScale (percent, 50 to 300).
-// Returns { el, setEnabled, applyScale, setMovable, setStretchable }.
+// Settings read from `state`: keysEnabled, keysScale (percent, 50 to 300),
+// keysRainbow (colours cycle through the rainbow instead of staying white).
+// Returns { el, setEnabled, setRainbow, applyScale, setMovable, setStretchable }.
 // hooks: { onScale(percent) } is called while the corner grip is dragged.
 
 function fleasioCreateKeystrokes(state, config, hooks) {
@@ -32,9 +33,10 @@ function fleasioCreateKeystrokes(state, config, hooks) {
     const nodes = {};
     const byCode = {};
     const byButton = {};
-    LAYOUT.forEach((k) => {
+    LAYOUT.forEach((k, index) => {
         const node = document.createElement("div");
         node.className = "fl-key fl-key-" + k.id;
+        node.style.setProperty("--i", String(index)); // each key sits at its own point on the rainbow
         node.textContent = k.label;
         el.appendChild(node);
         nodes[k.id] = node;
@@ -52,6 +54,10 @@ function fleasioCreateKeystrokes(state, config, hooks) {
     el.style.top = Math.round(window.innerHeight * 0.55) + "px";
     fleasioRestorePosition(state, "keys", el);
     document.documentElement.appendChild(el);
+
+    // Rainbow is pure CSS (a hue-rotate animation per key), so this is just a class.
+    function setRainbow(on) { el.classList.toggle("fl-rainbow", on); }
+    setRainbow(!!state.keysRainbow);
 
     function applyScale() {
         el.style.fontSize = (14 * state.keysScale / 100) + "px"; // everything is sized in em
@@ -157,6 +163,7 @@ function fleasioCreateKeystrokes(state, config, hooks) {
     return {
         el,
         setEnabled,
+        setRainbow,
         applyScale,
         setMovable(on) { el.classList.toggle("fl-movable", on); },
         setStretchable(on) { el.classList.toggle("fl-stretchable", on); },

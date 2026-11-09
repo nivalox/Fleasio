@@ -415,11 +415,30 @@ function buildFleasioUI(state, config, save, modules) {
         }
     ));
 
-    quickMenu.content.appendChild(fleasioToggle("Keystrokes", state.keysEnabled, (on) => {
-        state.keysEnabled = on;
-        GM_setValue(config.KEYS_ENABLED_KEY, on);
-        keys.setEnabled(on);
+    // Keystrokes: switch in the row, options behind its gear.
+    const keysRow = fleasioOptionsRow({
+        label: "Keystrokes",
+        enabled: state.keysEnabled,
+        gearTitle: "Keystrokes options",
+        onToggle: (on) => {
+            state.keysEnabled = on;
+            GM_setValue(config.KEYS_ENABLED_KEY, on);
+            keys.setEnabled(on);
+        },
+    });
+    keysSlider = fleasioSlider({
+        label: "Size", min: 50, max: 300, step: 10, value: state.keysScale, unit: "%",
+        onInput: (v) => { state.keysScale = v; keys.applyScale(); },
+        onChange: (v) => { GM_setValue(config.KEYS_SCALE_KEY, v); reflowAll(); },
+    });
+    keysRow.panel.appendChild(keysSlider.el);
+    keysRow.panel.appendChild(fleasioToggle("Rainbow", state.keysRainbow, (on) => {
+        state.keysRainbow = on;
+        GM_setValue(config.KEYS_RAINBOW_KEY, on);
+        keys.setRainbow(on);
     }));
+    keysRow.panel.appendChild(fleasioEl("div", "fl-hint", "Move UI: drag it. Stretch UI: drag its corner to resize."));
+    quickMenu.content.appendChild(keysRow.el);
     if (state.keysEnabled) keys.setEnabled(true);
 
     fleasioSectionLabel(quickMenu.content, "Performance");
@@ -459,16 +478,6 @@ function buildFleasioUI(state, config, save, modules) {
         movables: [stats, keys],
         stretchables: [keys],
         extraEls: [stats.el, keys.el],
-        extraSections: (sBody) => {
-            fleasioSectionLabel(sBody, "Keystrokes");
-            keysSlider = fleasioSlider({
-                label: "Size", min: 50, max: 300, step: 10, value: state.keysScale, unit: "%",
-                onInput: (v) => { state.keysScale = v; keys.applyScale(); },
-                onChange: (v) => { GM_setValue(config.KEYS_SCALE_KEY, v); reflowAll(); },
-            });
-            sBody.appendChild(keysSlider.el);
-            sBody.appendChild(fleasioEl("div", "fl-hint", "Turn it on in Quick Toggles. With Move UI on, drag it; with Stretch UI on, drag its corner to resize."));
-        },
         onHide: () => stats.stopTimers(),
         heightHint: "Taller shows more replacements and map results at once.",
         keybinds: [

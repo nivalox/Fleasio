@@ -136,7 +136,7 @@ AssetFetcher loads its shared code (`src/modules/*`, `src/ui/*`, `src/css/style.
 
 ⌨️ Keystrokes display
 
-Turn on **Keystrokes** in Quick Toggles to get an on-screen W A S D, Space, left mouse and right mouse display that lights up as you press them. Resize it from Settings (Keystrokes > Size) or turn on **Stretch UI** and drag its corner. Turn on **Move UI** to drag it where you want. It only watches your input, so it never gets in the game's way.
+Turn on **Keystrokes** in Quick Toggles to get an on-screen W A S D, Space, left mouse and right mouse display that lights up as you press them. Tap the ⚙ on that row for its options: **Size** and **Rainbow** (every key cycles through the rainbow colors). You can also turn on **Stretch UI** and drag its corner to resize, or **Move UI** to drag it where you want. It only watches your input, so it never gets in the game's way.
 
 ---
 

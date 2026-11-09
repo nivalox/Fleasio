@@ -5,7 +5,7 @@
    ========================================================================== */
 
 .fl-ui {
-    --fl-bg: rgba(20, 21, 27, 0.97);
+    --fl-bg: #14151b; /* solid: nothing behind a window shows through, and no blending cost */
     --fl-surface: rgba(255, 255, 255, 0.05);
     --fl-surface-hover: rgba(255, 255, 255, 0.10);
     --fl-field: rgba(0, 0, 0, 0.30);
@@ -491,7 +491,8 @@
 /* ---------- FPS limit row (Quick Toggles) ---------- */
 
 .fl-row-sub { color: var(--fl-dim); font-size: 11px; }
-.fl-fps-panel {
+.fl-fps-panel,
+.fl-subpanel {
     display: none;
     margin: -2px 0 10px;
     padding: 10px;
@@ -499,7 +500,9 @@
     border: 1px solid var(--fl-border);
     border-radius: 10px;
 }
-.fl-fps-panel.fl-show { display: block; }
+.fl-fps-panel.fl-show,
+.fl-subpanel.fl-show { display: block; }
+.fl-subpanel .fl-row, .fl-subpanel .fl-slider-row { margin-bottom: 4px; }
 .fl-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
 .fl-chip {
     appearance: none;
@@ -562,6 +565,28 @@
 .fl-key-space { grid-column: 1 / span 6; grid-row: 3; font-size: 0.8em; letter-spacing: 0.15em; }
 .fl-key-lmb { grid-column: 1 / span 3; grid-row: 4; font-size: 0.85em; }
 .fl-key-rmb { grid-column: 4 / span 3; grid-row: 4; font-size: 0.85em; }
+
+/* Rainbow: every key sits at its own point on the colour wheel and slowly
+   cycles. The base colour is a vivid red; hue-rotate shifts it (grays and the
+   dark background are unaffected). With "No animations" on, the keys keep a
+   static rainbow, because the per-key offset below is applied without the animation. */
+.fl-keys.fl-rainbow .fl-key {
+    border-color: #ff4040;
+    filter: hue-rotate(calc(var(--i, 0) * 50deg));
+    animation: fl-rainbow 5s linear infinite;
+    animation-delay: calc(var(--i, 0) * -0.7s);
+}
+.fl-keys.fl-rainbow .fl-key.fl-key-on {
+    background: #ff4040;
+    border-color: #ff8a8a;
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+    box-shadow: 0 0 0.8em #ff4040;
+}
+@keyframes fl-rainbow {
+    from { filter: hue-rotate(0deg); }
+    to { filter: hue-rotate(360deg); }
+}
 
 .fl-keys.fl-movable {
     pointer-events: auto;

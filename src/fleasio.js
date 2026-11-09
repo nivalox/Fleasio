@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fleasio
 // @namespace    fleasio-asset-replacer
-// @version      4.1
+// @version      4.2
 // @match        https://veck.io/*
 // @run-at       document-start
 // @grant        GM_xmlhttpRequest
@@ -12,20 +12,20 @@
 // @grant        GM_info
 // @grant        unsafeWindow
 // @connect      *
-// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/modules/utils.js?v=4.1
-// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/modules/adblock.js?v=4.1
-// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/modules/input-shield.js?v=4.1
-// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/modules/localfiles.js?v=4.1
-// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/modules/network.js?v=4.1
-// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/modules/maps.js?v=4.1
-// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/modules/keybinds.js?v=4.1
-// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/modules/stats.js?v=4.1
-// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/modules/keystrokes.js?v=4.1
-// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/modules/fps.js?v=4.1
-// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/ui/components.js?v=4.1
-// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/ui/shell.js?v=4.1
-// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/ui/UI.js?v=4.1
-// @resource     fleasioCSS https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/css/style.css?v=4.1
+// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/modules/utils.js?v=4.2
+// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/modules/adblock.js?v=4.2
+// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/modules/input-shield.js?v=4.2
+// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/modules/localfiles.js?v=4.2
+// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/modules/network.js?v=4.2
+// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/modules/maps.js?v=4.2
+// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/modules/keybinds.js?v=4.2
+// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/modules/stats.js?v=4.2
+// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/modules/keystrokes.js?v=4.2
+// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/modules/fps.js?v=4.2
+// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/ui/components.js?v=4.2
+// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/ui/shell.js?v=4.2
+// @require      https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/ui/UI.js?v=4.2
+// @resource     fleasioCSS https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/src/css/style.css?v=4.2
 // ==/UserScript==
 
 // Fleasio entry point. Everything else lives in the @require'd files:
@@ -50,6 +50,7 @@
         FPS_TARGET_KEY: "veck_fps_target",
         KEYS_ENABLED_KEY: "veck_keys_enabled",
         KEYS_SCALE_KEY: "veck_keys_scale",
+        KEYS_RAINBOW_KEY: "veck_keys_rainbow",
         DEFAULT_FPS_TARGET: 144,
         ICON_OPACITY_KEY: "veck_icon_opacity",
         ICON_SIZE_KEY: "veck_icon_size",
@@ -74,6 +75,7 @@
         fpsTarget: fleasioStoredNumber(config.FPS_TARGET_KEY, config.DEFAULT_FPS_TARGET, 0, 1000), // 0 = unlimited
         keysEnabled: !!GM_getValue(config.KEYS_ENABLED_KEY, false),
         keysScale: fleasioStoredNumber(config.KEYS_SCALE_KEY, 100, 50, 300),
+        keysRainbow: !!GM_getValue(config.KEYS_RAINBOW_KEY, false),
     });
 
     function save() {

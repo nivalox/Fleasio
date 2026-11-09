@@ -93,6 +93,8 @@ src/
 │   ├── input-shield.js   keeps the game from swallowing touch/keys on the UI
 │   ├── network.js        fetch/XHR asset replacement
 │   ├── localfiles.js     storage for bundle files uploaded from your device
+│   ├── keystrokes.js     W A S D / Space / mouse button display
+│   ├── fps.js            FPS limiter and unlocker
 │   ├── maps.js           map list loading for the browse dropdowns
 │   ├── keybinds.js       shortcut handling
 │   └── stats.js          ping / FPS HUD
@@ -126,12 +128,25 @@ A second userscript that lives in this repo. It uses the same UI as Fleasio, but
 - A red counter on the icon shows how many maps were captured while the menu was closed
 - The captured list is saved between visits; Settings has the same icon opacity/size, menu height and shortcut options as Fleasio, plus the asset types to detect and an optional list of custom words
 
-**Install:**
-```
-https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/assetfetcher/assetfetcher.js
-```
+**Install:** `https://raw.githubusercontent.com/nivalox/Fleasio/refs/heads/main/assetfetcher/assetfetcher.js`
 
 AssetFetcher loads its shared code (`src/modules/*`, `src/ui/*`, `src/css/style.css`) straight from this repo, so keep those files in place.
+
+---
+
+⌨️ Keystrokes display
+
+Turn on **Keystrokes** in Quick Toggles to get an on-screen W A S D, Space, left mouse and right mouse display that lights up as you press them. Resize it from Settings (Keystrokes > Size) or turn on **Stretch UI** and drag its corner. Turn on **Move UI** to drag it where you want. It only watches your input, so it never gets in the game's way.
+
+---
+
+⚡ FPS limiter / unlocker
+
+In Quick Toggles, flip **FPS limit** on and tap the ⚙ to pick a value: 30, 60, 90, 120, 144, 240, **Unlimited**, or type your own.
+
+- Below your screen's refresh rate (for example 30 on a 60 Hz screen) it skips frames on a steady schedule to save battery and heat
+- Above it (for example 144 on a 60 Hz screen) the game's frame loop runs off timers instead of the display, so it updates more often than the screen can show, which can cut input delay
+- Unlimited can heat up your device. If the game sets its own frame cap, that cap can still apply
 
 ---
 

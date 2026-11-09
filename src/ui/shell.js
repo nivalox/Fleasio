@@ -186,6 +186,8 @@ function fleasioWireLayout(ctx, opts) {
 //   keybinds: [{ label, stateKey, configKey }],
 //   reflowAll,                              // from fleasioWireLayout
 //   movables: [{ setMovable(on) }],         // extra things Move UI should unlock
+//   stretchables: [{ setStretchable(on) }], // extra things Stretch UI should unlock
+//   extraSections: (body) => {},            // adds script-specific Settings sections
 //   extraEls: [el],                         // extra elements Hide UI should fade out
 //   onHide: () => {},                       // extra work when the UI is hidden
 //   heightHint: "text"
@@ -234,6 +236,8 @@ function fleasioBuildSettings(ctx, body, o) {
         o.reflowAll();
     }));
 
+    if (o.extraSections) o.extraSections(body); // script-specific sections (e.g. Keystrokes)
+
     fleasioSectionLabel(body, "Interface");
     function setMoveMode(on) {
         state.moveMode = on;
@@ -249,6 +253,7 @@ function fleasioBuildSettings(ctx, body, o) {
     body.appendChild(fleasioToggle("Stretch UI (resize windows)", false, (on) => {
         state.stretchMode = on;
         o.windows.forEach(w => w.setStretchable(on));
+        (o.stretchables || []).forEach(m => m.setStretchable(on));
     }));
     body.appendChild(fleasioEl("div", "fl-hint", "Drag the corner grip of any window to make it whatever size you like."));
 
@@ -266,6 +271,7 @@ function fleasioBuildSettings(ctx, body, o) {
         setMoveMode(false);
         state.stretchMode = false;
         o.windows.forEach(w => { w.setStretchable(false); w.close(); });
+        (o.stretchables || []).forEach(m => m.setStretchable(false));
         allEls().forEach(el => fleasioFadeOutThenHide(el, state.noAnimations ? 0 : 250));
         if (o.onHide) o.onHide();
     }));

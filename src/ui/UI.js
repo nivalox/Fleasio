@@ -12,7 +12,7 @@ function buildFleasioUI(state, config, save, modules) {
     'use strict';
 
     const ctx = { state, config };
-    const { adblock, maps } = modules;
+    const { adblock, maps, fps } = modules;
     const version = (typeof GM_info !== "undefined" && GM_info.script) ? GM_info.script.version : "";
 
     // ------------------------------------------------------------------
@@ -66,7 +66,13 @@ function buildFleasioUI(state, config, save, modules) {
     }
 
     const stats = fleasioCreateStats(state, config);
-    const reflowAll = fleasioWireLayout(ctx, { fab, windows: overlays, extraEls: [stats.el] });
+
+    // Keystrokes HUD. Dragging its corner grip (Stretch UI) also moves the
+    // size slider in Settings, so the slider is looked up lazily.
+    let keysSlider = null;
+    const keys = fleasioCreateKeystrokes(state, config, { onScale: (v) => { if (keysSlider) keysSlider.set(v); } });
+
+    const reflowAll = fleasioWireLayout(ctx, { fab, windows: overlays, extraEls: [stats.el, keys.el] });
 
     // ------------------------------------------------------------------
     // Main panel: replacements
@@ -409,6 +415,29 @@ function buildFleasioUI(state, config, save, modules) {
         }
     ));
 
+    quickMenu.content.appendChild(fleasioToggle("Keystrokes", state.keysEnabled, (on) => {
+        state.keysEnabled = on;
+        GM_setValue(config.KEYS_ENABLED_KEY, on);
+        keys.setEnabled(on);
+    }));
+    if (state.keysEnabled) keys.setEnabled(true);
+
+    fleasioSectionLabel(quickMenu.content, "Performance");
+    quickMenu.content.appendChild(fleasioFpsRow({
+        enabled: state.fpsEnabled,
+        target: state.fpsTarget,
+        getRefreshHz: () => fps.refreshHz(),
+        measureRefresh: () => fps.measureRefresh(),
+        onToggle: (on) => {
+            state.fpsEnabled = on;
+            GM_setValue(config.FPS_ENABLED_KEY, on);
+        },
+        onTarget: (target) => {
+            state.fpsTarget = target;
+            GM_setValue(config.FPS_TARGET_KEY, target);
+        },
+    }));
+
     fleasioSectionLabel(quickMenu.content, "Misc");
     quickMenu.content.appendChild(fleasioToggle("Block Ads", state.adBlockEnabled, (val) => {
         state.adBlockEnabled = val;
@@ -427,8 +456,19 @@ function buildFleasioUI(state, config, save, modules) {
         panel,
         windows: overlays,
         reflowAll,
-        movables: [stats],
-        extraEls: [stats.el],
+        movables: [stats, keys],
+        stretchables: [keys],
+        extraEls: [stats.el, keys.el],
+        extraSections: (sBody) => {
+            fleasioSectionLabel(sBody, "Keystrokes");
+            keysSlider = fleasioSlider({
+                label: "Size", min: 50, max: 300, step: 10, value: state.keysScale, unit: "%",
+                onInput: (v) => { state.keysScale = v; keys.applyScale(); },
+                onChange: (v) => { GM_setValue(config.KEYS_SCALE_KEY, v); reflowAll(); },
+            });
+            sBody.appendChild(keysSlider.el);
+            sBody.appendChild(fleasioEl("div", "fl-hint", "Turn it on in Quick Toggles. With Move UI on, drag it; with Stretch UI on, drag its corner to resize."));
+        },
         onHide: () => stats.stopTimers(),
         heightHint: "Taller shows more replacements and map results at once.",
         keybinds: [

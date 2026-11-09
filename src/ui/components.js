@@ -180,6 +180,99 @@ function fleasioStatsToggle(initialMode, initialEnabled, onToggleChange, onModeC
     return row;
 }
 
+// FPS limit row for the Quick Toggles menu: label with the current value, a
+// gear that opens the presets / custom field, and the on/off switch.
+// opts: { enabled, target (0 = unlimited), getRefreshHz(), measureRefresh(),
+//         onToggle(on), onTarget(fps) }
+function fleasioFpsRow(opts) {
+    const PRESETS = [30, 60, 90, 120, 144, 240, 0]; // 0 = unlimited
+    const wrap = fleasioEl("div", "fl-fps");
+
+    const row = fleasioEl("div", "fl-row");
+    const label = fleasioEl("span", "fl-row-label", "FPS limit ");
+    const valueEl = fleasioEl("span", "fl-row-sub");
+    label.appendChild(valueEl);
+    row.appendChild(label);
+
+    const controls = fleasioEl("div", "fl-row-controls");
+    const gear = fleasioEl("button", "fl-icon-btn", "⚙");
+    gear.type = "button";
+    gear.title = "Choose an FPS limit";
+    controls.appendChild(gear);
+    let enabled = opts.enabled;
+    controls.appendChild(fleasioSwitch(enabled, (on) => { enabled = on; paint(); opts.onToggle(on); }));
+    row.appendChild(controls);
+    wrap.appendChild(row);
+
+    const panel = fleasioEl("div", "fl-fps-panel");
+    const chips = fleasioEl("div", "fl-chips");
+    const chipFor = new Map();
+    PRESETS.forEach((fps) => {
+        const chip = fleasioEl("button", "fl-chip", fps === 0 ? "Unlimited" : String(fps));
+        chip.type = "button";
+        chip.addEventListener("click", () => setTarget(fps));
+        chips.appendChild(chip);
+        chipFor.set(fps, chip);
+    });
+    panel.appendChild(chips);
+
+    const custom = fleasioEl("div", "fl-fps-custom");
+    const input = fleasioEl("input", "fl-input");
+    input.type = "number";
+    input.min = "5";
+    input.max = "1000";
+    input.inputMode = "numeric";
+    input.placeholder = "Custom FPS";
+    const setBtn = fleasioButton("Set", "secondary");
+    custom.appendChild(input);
+    custom.appendChild(setBtn);
+    panel.appendChild(custom);
+
+    const info = fleasioEl("div", "fl-hint fl-fps-info");
+    panel.appendChild(info);
+    wrap.appendChild(panel);
+
+    let target = opts.target;
+    function paint() {
+        valueEl.textContent = target === 0 ? "Unlimited" : target + " fps";
+        chipFor.forEach((chip, fps) => chip.classList.toggle("fl-chip-on", fps === target));
+        const hz = opts.getRefreshHz();
+        let text = `Your display runs at about ${hz} Hz. `;
+        if (target === 0 || target > hz + 1) text += "Above that, the game updates more often than the screen can show, which can cut input delay but uses more power.";
+        else if (target < hz - 1) text += "Below that, frames are skipped to save power.";
+        else text += "This matches your display.";
+        if (target === 0) text += " Unlimited can heat up your device.";
+        if (!enabled) text += " The switch is off, so the game is running at its normal speed.";
+        info.textContent = text;
+    }
+    function setTarget(fps) {
+        target = fps;
+        paint();
+        opts.onTarget(fps);
+    }
+
+    setBtn.addEventListener("click", () => {
+        const n = Math.round(Number(input.value));
+        if (!Number.isFinite(n) || n < 5 || n > 1000) {
+            input.classList.remove("fl-invalid");
+            void input.offsetWidth;
+            input.classList.add("fl-invalid");
+            setTimeout(() => input.classList.remove("fl-invalid"), 900);
+            return;
+        }
+        input.value = "";
+        setTarget(n);
+    });
+
+    gear.addEventListener("click", () => {
+        const open = panel.classList.toggle("fl-show");
+        if (open && opts.measureRefresh) opts.measureRefresh().then(paint);
+    });
+
+    paint();
+    return wrap;
+}
+
 // A draggable window: header (logo, title, optional extra actions, fullscreen,
 // close) + scrolling body. Position is remembered under `positionKey` once the
 // user drags it; until then `placement(overlay)` decides where it sits.
